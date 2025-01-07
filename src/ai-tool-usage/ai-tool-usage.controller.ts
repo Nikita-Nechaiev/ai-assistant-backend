@@ -1,0 +1,142 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
+import { AiToolUsageService } from './ai-tool-usage.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
+@Controller('ai-tool-usage')
+@UseGuards(JwtAuthGuard)
+export class AiToolUsageController {
+  constructor(private readonly aiToolUsageService: AiToolUsageService) {}
+
+  @Get('user')
+  async getUsageByUser(@Req() req) {
+    const userId = req.user.userId; // Extract userId from JWT payload
+    return this.aiToolUsageService.getUsageByUser(userId);
+  }
+
+  @Get('user/most-used-tool')
+  async getMostFrequentAiTool(@Req() req: any) {
+    const userId = req.user.id; // Extract user ID from the JWT payload
+    const mostUsedTool =
+      await this.aiToolUsageService.getMostFrequentAiTool(userId);
+    return { mostUsedTool };
+  }
+
+  @Get('document/:documentId')
+  async getUsageByDocument(@Param('documentId') documentId: number) {
+    return this.aiToolUsageService.getUsageByDocument(documentId);
+  }
+
+  @Post('grammar-check/:documentId?')
+  async checkGrammar(
+    @Req() req,
+    @Body('text') text: string,
+    @Param('documentId') documentId?: number,
+  ) {
+    const userId = req.user.userId;
+    return this.aiToolUsageService.checkGrammar(userId, text, documentId);
+  }
+
+  @Post('tone-analysis/:documentId?')
+  async analyzeTone(
+    @Req() req,
+    @Body('text') text: string,
+    @Param('documentId') documentId?: number,
+  ) {
+    const userId = req.user.userId;
+    return this.aiToolUsageService.analyzeTone(userId, text, documentId);
+  }
+
+  @Post('summarization/:documentId?')
+  async summarizeText(
+    @Req() req,
+    @Body('text') text: string,
+    @Param('documentId') documentId?: number,
+  ) {
+    const userId = req.user.userId;
+    return this.aiToolUsageService.summarizeText(userId, text, documentId);
+  }
+
+  @Post('rephrase/:documentId?')
+  async rephraseText(
+    @Req() req,
+    @Body('text') text: string,
+    @Param('documentId') documentId?: number,
+  ) {
+    const userId = req.user.userId;
+    return this.aiToolUsageService.rephraseText(userId, text, documentId);
+  }
+
+  @Post('autocomplete/:documentId?')
+  async autocompleteText(
+    @Req() req,
+    @Body('text') text: string,
+    @Param('documentId') documentId?: number,
+  ) {
+    const userId = req.user.userId;
+    return this.aiToolUsageService.autocompleteText(userId, text, documentId);
+  }
+
+  @Post('translation/:documentId?')
+  async translateText(
+    @Req() req,
+    @Body('text') text: string,
+    @Body('targetLanguage') targetLanguage: string,
+    @Param('documentId') documentId?: number,
+  ) {
+    const userId = req.user.userId;
+    return this.aiToolUsageService.translateText(
+      userId,
+      text,
+      targetLanguage,
+      documentId,
+    );
+  }
+
+  @Post('keyword-extraction/:documentId?')
+  async extractKeywords(
+    @Req() req,
+    @Body('text') text: string,
+    @Param('documentId') documentId?: number,
+  ) {
+    const userId = req.user.userId;
+    return this.aiToolUsageService.extractKeywords(userId, text, documentId);
+  }
+
+  @Post('text-generation/:documentId?')
+  async generateText(
+    @Req() req,
+    @Body('prompt') prompt: string,
+    @Param('documentId') documentId?: number,
+  ) {
+    const userId = req.user.userId;
+    return this.aiToolUsageService.generateText(userId, prompt, documentId);
+  }
+
+  @Post('readability-analysis/:documentId?')
+  async analyzeReadability(
+    @Req() req,
+    @Body('text') text: string,
+    @Param('documentId') documentId?: number,
+  ) {
+    const userId = req.user.userId;
+    return this.aiToolUsageService.analyzeReadability(userId, text, documentId);
+  }
+
+  @Post('title-generation/:documentId?')
+  async generateTitle(
+    @Req() req,
+    @Body('text') text: string,
+    @Param('documentId') documentId?: number,
+  ) {
+    const userId = req.user.userId;
+    return this.aiToolUsageService.generateTitle(userId, text, documentId);
+  }
+}
