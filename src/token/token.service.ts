@@ -9,23 +9,22 @@ export class TokenService {
   constructor(
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<Token>,
-    private readonly jwtService: JwtService, // Use Nest.js JwtService
+    private readonly jwtService: JwtService,
   ) {}
 
   generateTokens(payload: any) {
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: '60m', // 60 minutes for access token
+      expiresIn: '60m',
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET, // Separate secret for refresh token
-      expiresIn: '30d', // 30 days for refresh token
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: '30d',
     });
 
     return { accessToken, refreshToken };
   }
 
-  // Save or update a refresh token for a user
   async saveToken(userId: number, refreshToken: string) {
     const tokenData = await this.tokenRepository.findOne({ where: { userId } });
 
@@ -45,7 +44,7 @@ export class TokenService {
   validateRefreshToken(refreshToken: string) {
     try {
       const userData = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET, // Use refresh token secret
+        secret: process.env.JWT_REFRESH_SECRET,
       });
       return userData;
     } catch (e) {
@@ -55,7 +54,7 @@ export class TokenService {
 
   validateAccessToken(accessToken: string) {
     try {
-      const userData = this.jwtService.verify(accessToken); // Access token secret is already configured in JwtModule
+      const userData = this.jwtService.verify(accessToken);
       return userData;
     } catch (e) {
       return null;

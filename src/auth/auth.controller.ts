@@ -15,11 +15,11 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
-import { AuthGuard } from '@nestjs/passport';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Request, Response } from 'express';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
 export class AuthController {
@@ -33,9 +33,12 @@ export class AuthController {
   ) {
     const { accessToken, refreshToken, user } =
       await this.authService.login(loginDto);
+    console.log('login refresh token', refreshToken);
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
@@ -57,7 +60,9 @@ export class AuthController {
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      maxAge: 30 * 24 * 60 * 60 * 1000,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
     return { accessToken, user };
@@ -73,55 +78,74 @@ export class AuthController {
     }
 
     await this.authService.logout(refreshToken);
-    res.clearCookie('refreshToken');
-    return { message: 'Logged out successfully' };
-  }
 
-  @Get('refresh')
-  @HttpCode(HttpStatus.OK)
-  async refresh(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const cookieToken = req.cookies.refreshToken;
-    if (!cookieToken) {
-      throw new UnauthorizedException('No refresh token found');
-    }
-
-    try {
-      const { refreshToken , accessToken, user} = await this.authService.refresh(cookieToken);
-
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      });
-
-      return { accessToken, user };
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  @Get('google')
-  @UseGuards(AuthGuard('google'))
-  googleLogin() {}
-
-  @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
-  async googleLoginCallback(@Req() req, @Res() res) {
-    const { accessToken, refreshToken } = await this.authService.oauthLogin(
-      req.user,
-    );
-
-    res.cookie('refreshToken', refreshToken, {
+    res.clearCookie('refreshToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
-    const frontendUrl = `${process.env.FRONTEND_URL}/?token=${accessToken}`;
-    res.redirect(frontendUrl);
+    res.clearCookie('accessToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
+    return { message: 'Logged out successfully' };
+  }
+
+  @Get('refresh-cookies')
+  @HttpCode(HttpStatus.OK)
+  async setRefreshCookie(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('No refresh token found');
+    }
+
+    const { newRefreshToken, accessToken } =
+      await this.authService.refresh(refreshToken);
+
+    if (newRefreshToken) {
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+    }
+
+    if (accessToken) {
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000,
+      });
+    }
+
+    return { message: 'Refresh token set in cookies' };
+  }
+
+  @Get('get-tokens')
+  @HttpCode(HttpStatus.OK)
+  async refreshWithToken(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('No refresh token found');
+    }
+
+    const { newRefreshToken, accessToken, user } =
+      await this.authService.refresh(refreshToken);
+
+    return { accessToken, newRefreshToken, user };
   }
 
   @Post('forgot-password')
@@ -137,5 +161,34 @@ export class AuthController {
     @Body() resetPasswordDto: ResetPasswordDto,
   ) {
     return this.authService.resetPassword(token, resetPasswordDto);
+  }
+
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  googleLogin() {}
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleLoginCallback(@Req() req, @Res({ passthrough: true }) res) {
+    const { accessToken, refreshToken } = await this.authService.oauthLogin(
+      req.user,
+    );
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    const frontendUrl = `${process.env.FRONTEND_URL}/dashboard`;
+    return res.redirect(frontendUrl);
   }
 }

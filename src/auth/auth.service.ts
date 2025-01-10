@@ -118,7 +118,7 @@ export class AuthService {
 
   async refresh(
     refreshToken: string,
-  ): Promise<{ accessToken: string; refreshToken: string, user: User }> {
+  ): Promise<{ accessToken: string; newRefreshToken: string; user: User }> {
     const userData = this.tokenService.validateRefreshToken(refreshToken);
     if (!userData) {
       throw new UnauthorizedException('Invalid refresh token');
@@ -139,9 +139,13 @@ export class AuthService {
 
     await this.tokenService.saveToken(user.id, tokens.refreshToken);
 
-    delete user.passwordHash
+    delete user.passwordHash;
 
-    return {...tokens, user};
+    return {
+      accessToken: tokens.accessToken,
+      newRefreshToken: tokens.refreshToken,
+      user,
+    };
   }
 
   async oauthLogin(user: any) {
