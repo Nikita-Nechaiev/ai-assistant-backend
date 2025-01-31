@@ -17,19 +17,37 @@ export class MessagesService {
     collaborationSession: CollaborationSession,
     text: string,
   ): Promise<Message> {
+    // Create and save the message
     const message = this.messageRepository.create({
       sender,
-      collaborationSession,
+      collaborationSession: { id: collaborationSession.id },
       text,
     });
-    return this.messageRepository.save(message);
+
+    await this.messageRepository.save(message);
+
+    // Use QueryBuilder to control the fetched fields explicitly
+    return this.messageRepository
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.sender', 'sender') // Join sender relation
+      .select([
+        'message.id',
+        'message.text',
+        'message.createdAt',
+        'sender.id',
+        'sender.name',
+        'sender.email',
+        'sender.avatar', // Include only the required sender fields
+      ])
+      .where('message.id = :id', { id: message.id })
+      .getOne();
   }
 
   async getMessagesForSession(
     collaborationSession: CollaborationSession,
   ): Promise<Message[]> {
     return this.messageRepository.find({
-      where: { collaborationSession },
+      where: { collaborationSession: { id: collaborationSession.id } },
       order: { createdAt: 'ASC' },
     });
   }

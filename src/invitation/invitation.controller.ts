@@ -1,33 +1,34 @@
-import { Controller, Post, Put, Body, Param } from '@nestjs/common';
+import { Controller, Post, Put, Delete, Param, Body } from '@nestjs/common';
 import { InvitationService } from './invitation.service';
-import { InvitationStatus } from './invitation.model';
+import { UpdateInvitationDto } from './dto/update-invitation.dto';
+import { CreateInvitationDto } from './dto/create-invitation.dto';
+
+import { Get } from '@nestjs/common';
 
 @Controller('invitations')
 export class InvitationController {
   constructor(private readonly invitationService: InvitationService) {}
 
-  @Post('create')
-  async createInvitation(
-    @Body('sessionId') sessionId: number,
-    @Body('email') email: string,
-    @Body('role') role: string,
-    @Body('inviter') inviter: string,
-    @Body('expiresAt') expiresAt?: Date,
-  ) {
-    return this.invitationService.createInvitation(
-      sessionId,
-      email,
-      role,
-      inviter,
-      expiresAt,
-    );
+  @Get('/')
+  async findAll() {
+    return this.invitationService.findAll();
   }
 
-  @Put(':id/status')
-  async updateInvitationStatus(
+  @Post('/create')
+  async create(@Body() createInvitationDto: CreateInvitationDto) {
+    return this.invitationService.create(createInvitationDto);
+  }
+
+  @Put('/:id')
+  async update(
     @Param('id') id: number,
-    @Body('status') status: InvitationStatus,
+    @Body() updateInvitationDto: UpdateInvitationDto,
   ) {
-    return this.invitationService.updateInvitationStatus(id, status);
+    return this.invitationService.update(id, updateInvitationDto);
+  }
+
+  @Delete('/:id')
+  async delete(@Param('id') id: number) {
+    return this.invitationService.delete(id);
   }
 }

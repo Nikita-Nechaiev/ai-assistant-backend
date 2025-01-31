@@ -14,8 +14,6 @@ export class EmailService {
         user: process.env.SMTP_USER, // Gmail address
         pass: process.env.SMTP_PASSWORD, // App password
       },
-      logger: true, // Enable debug logging
-      debug: true, // Include debug info
     });
   }
 

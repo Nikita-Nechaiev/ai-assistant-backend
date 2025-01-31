@@ -40,7 +40,6 @@ export class AuthService {
   async register(registerDto: RegisterDto, avatarFile?: Express.Multer.File) {
     const { email, password, name } = registerDto;
 
-    // Check if the user already exists
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
@@ -206,12 +205,16 @@ export class AuthService {
     resetPasswordDto: ResetPasswordDto,
   ): Promise<void> {
     const { password } = resetPasswordDto;
+    console.log('passwor1', password);
+    console.log('token', token);
 
     const user = await this.usersService.findByResetToken(token);
+    console.log('password2', password);
+
     if (!user || Date.now() > user.resetTokenExpires) {
       throw new BadRequestException('Invalid or expired reset token');
     }
-
+    console.log('password3', password)
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await this.usersService.updatePassword(user.id, hashedPassword);

@@ -7,6 +7,9 @@ import { UsersModule } from 'src/user/users.module';
 import { InvitationModule } from 'src/invitation/invitation.module';
 import { DocumentModule } from 'src/document/document.module';
 import { UserCollaborationSessionModule } from 'src/user-collaboration-session/user-collaboration-session.module';
+import { CollaborationSessionGateway } from './collaboration-session.gateway';
+import { MessagesModule } from 'src/messages/messages.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -15,9 +18,12 @@ import { UserCollaborationSessionModule } from 'src/user-collaboration-session/u
     DocumentModule,
     UserCollaborationSessionModule,
     InvitationModule,
+    MessagesModule,
+    AuthModule
   ],
   controllers: [CollaborationSessionController],
-  providers: [CollaborationSessionService],
+  providers: [CollaborationSessionService, CollaborationSessionGateway],
   exports: [CollaborationSessionService],
 })
-export class CollaborationSessionModule {}
+export class CollaborationSessionModule {
+}

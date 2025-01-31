@@ -1,4 +1,6 @@
 import { CollaborationSession } from 'src/collaboration-session/collaboration-session.model';
+import { Permission } from 'src/user-collaboration-session/user-collaboration-session.model';
+import { User } from 'src/user/user.model';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -10,8 +12,11 @@ import {
 export enum InvitationStatus {
   PENDING = 'pending',
   ACCEPTED = 'accepted',
-  DECLINED = 'declined',
-  EXPIRED = 'expired'
+}
+
+export enum NotificationStatus {
+  UNREAD = 'unread',
+  READ = 'read',
 }
 
 @Entity('invitations')
@@ -19,11 +24,8 @@ export class Invitation {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 255 })
-  email: string;
-
   @Column({ type: 'varchar', length: 50 })
-  role: string;
+  role: Permission;
 
   @ManyToOne(() => CollaborationSession, (session) => session.invitations, {
     onDelete: 'CASCADE',
@@ -35,14 +37,24 @@ export class Invitation {
     enum: InvitationStatus,
     default: InvitationStatus.PENDING,
   })
-  status: InvitationStatus;
+  invitationStatus: InvitationStatus;
+
+  @Column({
+    type: 'enum',
+    enum: NotificationStatus,
+    default: NotificationStatus.UNREAD,
+  })
+  notificationStatus: NotificationStatus;
 
   @CreateDateColumn()
-  createdAt: Date;
+  date: Date;
 
   @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date | null; // Срок действия приглашения (например, 7 дней)
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  inviter: string;
+  inviterEmail: string;
+
+  @ManyToOne(() => User, (user) => user.invitations, { onDelete: 'CASCADE' })
+  receiver: User;
 }

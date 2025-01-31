@@ -14,7 +14,7 @@ export class DocumentService {
     private readonly documentRepository: Repository<Document>,
     private readonly aiToolUsageService: AiToolUsageService,
     private readonly versionService: VersionService,
-    private readonly analyticsSummaryService: AnalyticsSummaryService,
+    // private readonly analyticsSummaryService: AnalyticsSummaryService,
   ) {}
 
   async createDocument(
@@ -34,12 +34,12 @@ export class DocumentService {
     const savedDocument = await this.documentRepository.save(document);
 
     // Retrieve analytics and update totalDocuments
-    const analytics =
-      await this.analyticsSummaryService.getUserAnalytics(userId);
+    // const analytics =
+    //   await this.analyticsSummaryService.getUserAnalytics(userId);
 
-    await this.analyticsSummaryService.updateAnalytics(userId, {
-      totalDocuments: analytics.totalDocuments + 1,
-    });
+    // await this.analyticsSummaryService.updateAnalytics(userId, {
+    //   totalDocuments: analytics.totalDocuments + 1,
+    // });
 
     await this.versionService.createVersion(
       savedDocument.id,
@@ -61,12 +61,12 @@ export class DocumentService {
     }
 
     // Retrieve analytics and update totalDocuments
-    const analytics =
-      await this.analyticsSummaryService.getUserAnalytics(userId);
+    // const analytics =
+    //   await this.analyticsSummaryService.getUserAnalytics(userId);
 
-    await this.analyticsSummaryService.updateAnalytics(userId, {
-      totalDocuments: Math.max(analytics.totalDocuments - 1, 0), // Ensure totalDocuments doesn't go below 0
-    });
+    // await this.analyticsSummaryService.updateAnalytics(userId, {
+    //   totalDocuments: Math.max(analytics.totalDocuments - 1, 0), // Ensure totalDocuments doesn't go below 0
+    // });
 
     await this.documentRepository.remove(document);
   }

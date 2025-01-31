@@ -3,10 +3,13 @@ import { InvitationController } from './invitation.controller';
 import { InvitationService } from './invitation.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Invitation } from './invitation.model';
-import { CollaborationSessionModule } from 'src/collaboration-session/collaboration-session.module';
+import { UserCollaborationSessionModule } from 'src/user-collaboration-session/user-collaboration-session.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Invitation])],
+  imports: [
+    TypeOrmModule.forFeature([Invitation]),
+    UserCollaborationSessionModule,
+  ],
   controllers: [InvitationController],
   providers: [InvitationService],
   exports: [InvitationService],

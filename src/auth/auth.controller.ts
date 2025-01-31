@@ -33,7 +33,6 @@ export class AuthController {
   ) {
     const { accessToken, refreshToken, user } =
       await this.authService.login(loginDto);
-    console.log('login refresh token', refreshToken);
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
@@ -41,6 +40,15 @@ export class AuthController {
       sameSite: 'strict',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
+
+    if (accessToken) {
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000,
+      });
+    }
 
     return { accessToken, user };
   }
@@ -62,10 +70,19 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
-    return { accessToken, user };
+    if (accessToken) {
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000,
+      });
+    }
+
+    return { user };
   }
 
   @Post('logout')
@@ -160,6 +177,7 @@ export class AuthController {
     @Param('token') token: string,
     @Body() resetPasswordDto: ResetPasswordDto,
   ) {
+    console.log('resetPasswordDto', resetPasswordDto);
     return this.authService.resetPassword(token, resetPasswordDto);
   }
 
@@ -170,25 +188,34 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleLoginCallback(@Req() req, @Res({ passthrough: true }) res) {
-    const { accessToken, refreshToken } = await this.authService.oauthLogin(
-      req.user,
-    );
+    try {
+      const { accessToken, refreshToken } = await this.authService.oauthLogin(
+        req.user,
+      );
 
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    });
+      res.cookie('refreshToken', refreshToken, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
 
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
+      res.cookie('accessToken', accessToken, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 15 * 60 * 1000, // 15 minutes
+      });
 
-    const frontendUrl = `${process.env.FRONTEND_URL}/dashboard`;
-    return res.redirect(frontendUrl);
+      const frontendUrl = `${process.env.FRONTEND_URL}/`;
+      return res.redirect(frontendUrl);
+    } catch (error) {
+      console.error('Error during Google login callback:', error);
+
+      const loginUrl = `${process.env.FRONTEND_URL}/login`;
+      return res.redirect(loginUrl);
+    }
   }
 }

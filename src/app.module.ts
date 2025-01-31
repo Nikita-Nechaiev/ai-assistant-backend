@@ -11,7 +11,6 @@ import { EmailModule } from './email/email.module';
 import { UserCollaborationSessionModule } from './user-collaboration-session/user-collaboration-session.module';
 import { SettingsModule } from './settings/settings.module';
 import { InvitationModule } from './invitation/invitation.module';
-import { NotificationModule } from './notifications/notification.module';
 import { MessagesModule } from './messages/messages.module';
 import { TokenModule } from './token/token.module';
 
@@ -42,7 +41,6 @@ import { TokenModule } from './token/token.module';
     EmailModule,
     UserCollaborationSessionModule,
     SettingsModule,
-    NotificationModule,
     InvitationModule,
     MessagesModule,
     TokenModule,

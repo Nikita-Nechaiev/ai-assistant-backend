@@ -11,8 +11,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly analyticsSummaryService: AnalyticsSummaryService,
-    private readonly settingsService: SettingsService,
+    // private readonly analyticsSummaryService: AnalyticsSummaryService,
+    // private readonly settingsService: SettingsService,
   ) {}
 
   async findByEmail(email: string): Promise<User | null> {
@@ -23,16 +23,18 @@ export class UsersService {
     const user = await this.userRepository.findOne({
       where: { id },
       relations: [
-        'userCollaborationSessions',
         'aiToolUsages',
-        'notifications',
+        'invitations',
+        'invitations.session',
         'settings',
         'analyticsSummary',
       ],
     });
+
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
+
     return user;
   }
 
@@ -40,6 +42,7 @@ export class UsersService {
     googleId: string,
     email: string,
     name: string,
+    avatar: string | null,
   ): Promise<User> {
     let user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
@@ -48,6 +51,9 @@ export class UsersService {
         name,
         oauthProvider: 'google',
         oauthId: googleId,
+        avatar: avatar ? avatar : '/uploads/avatars/default-ava.webp',
+        resetToken: '',
+        resetTokenExpires: null,
       });
       await this.userRepository.save(user);
     }
@@ -62,23 +68,18 @@ export class UsersService {
       oauthProvider: userData.oauthProvider || null,
       oauthId: userData.oauthId || null,
       roles: userData.roles || [Role.USER],
-      resetToken: userData.resetToken || null,
-      resetTokenExpires: userData.resetTokenExpires || null,
       avatar: userData.avatar || null,
-      userCollaborationSessions: [],
-      aiToolUsages: [],
-      notifications: [],
     });
 
     const savedUser = await this.userRepository.save(user);
 
-    const settings =
-      await this.settingsService.createDefaultSettings(savedUser);
-    const analyticsSummary =
-      await this.analyticsSummaryService.createBaseAnalytics(savedUser);
+    // const settings =
+    //   await this.settingsService.createDefaultSettings(savedUser);
+    // const analyticsSummary =
+    //   await this.analyticsSummaryService.createBaseAnalytics(savedUser);
 
-    savedUser.settings = settings;
-    savedUser.analyticsSummary = analyticsSummary;
+    // savedUser.settings = settings;
+    // savedUser.analyticsSummary = analyticsSummary;
 
     const finalUser = await this.userRepository.save(savedUser);
 
@@ -103,6 +104,7 @@ export class UsersService {
   async findByResetToken(token: string): Promise<User | null> {
     const users = await this.userRepository.find();
     for (const user of users) {
+      console.log(user);
       if (await bcrypt.compare(token, user.resetToken)) {
         return user;
       }
@@ -111,9 +113,10 @@ export class UsersService {
   }
 
   async updatePassword(userId: number, hashedPassword: string): Promise<void> {
+    console.log('hashedPassword', hashedPassword);
     await this.userRepository.update(userId, {
       passwordHash: hashedPassword,
-      resetToken: null,
+      resetToken: '',
       resetTokenExpires: null,
     });
   }

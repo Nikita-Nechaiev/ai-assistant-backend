@@ -14,13 +14,20 @@ export class UserCollaborationSessionService {
     @InjectRepository(UserCollaborationSession)
     private readonly userCollabSessionRepository: Repository<UserCollaborationSession>,
     private readonly userService: UsersService,
-    private readonly analyticsSummaryService: AnalyticsSummaryService, // Injected AnalyticsSummaryService
+    // private readonly analyticsSummaryService: AnalyticsSummaryService, // Injected AnalyticsSummaryService
   ) {}
 
-  async getUserCollaborationSessions(userId: number): Promise<any[]> {
+  async getUserCollaborationSessions(
+    userId: number,
+    skip: number = 0,
+    take: number = 25,
+  ): Promise<UserCollaborationSession[]> {
     const userCollabSessions = await this.userCollabSessionRepository.find({
       where: { user: { id: userId } },
       relations: ['session'],
+      skip,
+      take,
+      order: { id: 'ASC' },
     });
 
     return userCollabSessions;
@@ -31,7 +38,6 @@ export class UserCollaborationSessionService {
     sessionId: number,
     permissions: Permission[] = [Permission.READ],
   ): Promise<UserCollaborationSession> {
-
     const user = await this.userService.findById(userId);
 
     if (!user) {
@@ -42,7 +48,6 @@ export class UserCollaborationSessionService {
       throw new Error('Collaboration Session not found');
     }
 
-    // Create the user-collaboration-session link
     const userCollabSession = this.userCollabSessionRepository.create({
       user,
       session: { id: sessionId },
@@ -53,30 +58,26 @@ export class UserCollaborationSessionService {
   }
 
   async updateTimeSpent(
+    userId: number,
     sessionId: number,
     timeSpent: number,
   ): Promise<UserCollaborationSession> {
-    const session = await this.userCollabSessionRepository.findOne({
-      where: { id: sessionId },
-      relations: ['user'], // Include the related user for updating analytics
-    });
+    const session = await this.findByUserAndSession(userId, sessionId);
 
     if (!session) {
       throw new Error('User Collaboration Session not found');
     }
 
-    // Update the time spent in the session
-    session.timeSpent += timeSpent;
+    session.timeSpent = Math.round(Number(session.timeSpent) + timeSpent);
+
     await this.userCollabSessionRepository.save(session);
 
-    // Update the activeHours in AnalyticsSummary
-    const userId = session.user.id;
-    const hoursSpent = timeSpent / (1000 * 60 * 60); // Convert milliseconds to hours
+    // const hoursSpent = timeSpent / (1000 * 60 * 60); // Convert milliseconds to hours
 
-    await this.analyticsSummaryService.updateAnalytics(userId, {
-      activeHours:
-        (session.user.analyticsSummary.activeHours || 0) + hoursSpent,
-    });
+    // await this.analyticsSummaryService.updateAnalytics(userId, {
+    //   activeHours:
+    //     (session.user.analyticsSummary.activeHours || 0) + hoursSpent,
+    // });
 
     return session;
   }
@@ -107,12 +108,12 @@ export class UserCollaborationSessionService {
     }
 
     // Decrement totalSessions in AnalyticsSummary
-    await this.analyticsSummaryService.updateAnalytics(session.user.id, {
-      totalSessions: Math.max(
-        0,
-        session.user.analyticsSummary.totalSessions - 1,
-      ),
-    });
+    // await this.analyticsSummaryService.updateAnalytics(session.user.id, {
+    //   totalSessions: Math.max(
+    //     0,
+    //     session.user.analyticsSummary.totalSessions - 1,
+    //   ),
+    // });
 
     await this.userCollabSessionRepository.remove(session);
   }

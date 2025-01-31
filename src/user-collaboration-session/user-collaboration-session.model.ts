@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, ManyToOne, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 import { User } from 'src/user/user.model';
 import { CollaborationSession } from 'src/collaboration-session/collaboration-session.model';
 
@@ -34,5 +34,11 @@ export class UserCollaborationSession {
   permissions: Permission[];
 
   @Column({ type: 'bigint', default: 0 })
-  timeSpent: number;
+  timeSpent: number; // seconds
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @CreateDateColumn()
+  lastInteracted: Date;
 }

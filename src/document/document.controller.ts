@@ -14,7 +14,7 @@ import { Document } from './document.model';
 import { AuthGuard } from '@nestjs/passport';
 
 @Controller('documents')
-@UseGuards(AuthGuard('jwt')) // Apply JWT Guard to all endpoints in this controller
+// @UseGuards(AuthGuard('jwt')) // Apply JWT Guard to all endpoints in this controller
 export class DocumentController {
   constructor(private readonly documentService: DocumentService) {}
 
@@ -26,7 +26,8 @@ export class DocumentController {
     @Body('content') content?: string,
     @Body('richContent') richContent?: object,
   ) {
-    const userId = req.user.userId;
+    // const userId = req.user.userId;
+    const userId = 2
     return this.documentService.createDocument(
       title,
       collaborationSessionId,

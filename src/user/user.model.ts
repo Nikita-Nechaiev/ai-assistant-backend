@@ -1,6 +1,6 @@
 import { AiToolUsage } from 'src/ai-tool-usage/ai-tool-usage.model';
 import { AnalyticsSummary } from 'src/analytics-summary/analytics-summary.model';
-import { Notification } from 'src/notifications/notification.model';
+import { Invitation } from 'src/invitation/invitation.model';
 import { Settings } from 'src/settings/settings.model';
 import { UserCollaborationSession } from 'src/user-collaboration-session/user-collaboration-session.model';
 import {
@@ -44,14 +44,14 @@ export class User {
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'varchar', default: '' })
   resetToken: string;
 
   @Column({ type: 'bigint', nullable: true })
   resetTokenExpires: number;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  avatar: string; // URL или путь до аватарки пользователя
+  avatar: string;
 
   @OneToMany(() => UserCollaborationSession, (userSession) => userSession.user)
   userCollaborationSessions: UserCollaborationSession[];
@@ -59,8 +59,8 @@ export class User {
   @OneToMany(() => AiToolUsage, (aiToolUsage) => aiToolUsage.user)
   aiToolUsages: AiToolUsage[];
 
-  @OneToMany(() => Notification, (notification) => notification.user)
-  notifications: Notification[];
+  @OneToMany(() => Invitation, (invitation) => invitation.receiver)
+  invitations: Invitation[];
 
   @OneToOne(() => Settings, (settings) => settings.user, { cascade: true })
   @JoinColumn()
