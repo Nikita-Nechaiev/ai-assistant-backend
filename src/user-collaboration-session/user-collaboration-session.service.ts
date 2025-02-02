@@ -82,6 +82,22 @@ export class UserCollaborationSessionService {
     return session;
   }
 
+  async updateLastInteracted(
+    userId: number,
+    sessionId: number,
+    date: Date,
+  ): Promise<UserCollaborationSession> {
+    const session = await this.findByUserAndSession(userId, sessionId);
+
+    if (!session) {
+      throw new Error('User Collaboration Session not found');
+    }
+
+    session.lastInteracted = date;
+
+    return this.userCollabSessionRepository.save(session);
+  }
+
   async updatePermissions(
     sessionId: number,
     permissions: Permission[],

@@ -22,13 +22,6 @@ export class UsersService {
   async findById(id: number): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: [
-        'aiToolUsages',
-        'invitations',
-        'invitations.session',
-        'settings',
-        'analyticsSummary',
-      ],
     });
 
     if (!user) {

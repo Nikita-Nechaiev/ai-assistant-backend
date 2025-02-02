@@ -147,13 +147,22 @@ export class CollaborationSessionGateway
             sessionId,
             timeSpentSeconds,
           );
+
+          // Обновляем lastInteracted на дату выхода (текущее время)
+          await this.userCollaborationSessionService.updateLastInteracted(
+            userId,
+            sessionId,
+            new Date(),
+          );
+
           this.logger.log(
             `User ${userId} spent ${timeSpentSeconds}s in the session (${sessionId}).`,
           );
 
-          // Удаляем запись о пользователе
+          // Уведомляем сессию, что пользователь вышел
           this.server.to(`session_${sessionId}`).emit('userLeft', { userId });
 
+          // Удаляем запись о пользователе
           this.onlineUsers.delete(userId);
         }
       }
@@ -164,7 +173,6 @@ export class CollaborationSessionGateway
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  // ====================== ЛОГИКA ДЛЯ DASHBOARD / УВЕДОМЛЕНИЙ ====================== //
   // ====================== ЛОГИКA ДЛЯ DASHBOARD / УВЕДОМЛЕНИЙ ====================== //
   @SubscribeMessage('joinDashboard')
   async handleJoinDashboard(@ConnectedSocket() client: Socket) {
@@ -218,11 +226,9 @@ export class CollaborationSessionGateway
         },
       );
 
-      // Get session ID for broadcast
       const sessionRoom = `session_${updatedInvitation.session.id}`;
       const dashboardRoom = `dashboard_${userId}`;
 
-      // Inform all relevant rooms
       this.server
         .to(sessionRoom)
         .emit('notificationUpdated', updatedInvitation);
@@ -243,7 +249,6 @@ export class CollaborationSessionGateway
     @MessageBody() data: { invitationId: number },
   ) {
     try {
-      // Get session ID before deletion
       const invitation = await this.invitationService.findById(
         data.invitationId,
       );
@@ -257,7 +262,6 @@ export class CollaborationSessionGateway
 
       await this.invitationService.delete(data.invitationId);
 
-      // Broadcast to all relevant rooms
       this.server
         .to(sessionRoom)
         .emit('notificationDeleted', { invitationId: data.invitationId });
@@ -758,17 +762,14 @@ export class CollaborationSessionGateway
       return;
     }
 
-    // 2) Update the session name
     await this.collaborationSessionService.updateSessionName(
       sessionId,
       newName,
     );
 
-    // 3) Get updated session data
     const sessionData =
       await this.collaborationSessionService.getSession(sessionId);
 
-    // 4) Fetch online users for the session
     const onlineUserSessions = sessionData.userCollaborationSessions.filter(
       (ucs) => {
         const onlineData = this.onlineUsers.get(ucs.user.id);
@@ -784,10 +785,9 @@ export class CollaborationSessionGateway
       permissions: ucs.permissions,
     }));
 
-    // 5) Notify all users in the room about the session name change
     this.server.to(`session_${sessionId}`).emit('sessionData', {
       session: sessionData,
-      users: onlineCollaborators, // Updated online users
+      users: onlineCollaborators,
     });
 
     this.logger.log(

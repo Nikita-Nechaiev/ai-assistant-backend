@@ -27,32 +27,85 @@ export class AiToolUsageService {
       .replace(/\s\s+/g, ' ');
   }
 
-  async getUsageByUser(userId: number): Promise<AiToolUsage[]> {
+  async getUsageByUser(
+    userId: number,
+    page: number = 1,
+    limit: number = 5,
+  ): Promise<AiToolUsage[]> {
+    const skip = (page - 1) * limit;
+    return this.aiToolUsageRepository.find({
+      where: { user: { id: userId } },
+      order: { timestamp: 'DESC' },
+      skip,
+      take: limit,
+    });
+  }
+
+  // Helper: fetch all usage for statistics
+  async getAllUsageByUser(userId: number): Promise<AiToolUsage[]> {
     return this.aiToolUsageRepository.find({
       where: { user: { id: userId } },
     });
   }
 
-  async getMostFrequentAiTool(userId: number): Promise<string | null> {
-    const usage = await this.getUsageByUser(userId);
+  // Returns statistics about AI tool usage.
+  async getMostFrequentAiTool(userId: number): Promise<{
+    mostFrequentTool: string | null;
+    totalUsageNumber: number;
+    totalWordCount: number;
+    mostInDayUsage: Date | null;
+    firstAiUsage: Date | null;
+  }> {
+    const usage = await this.getAllUsageByUser(userId);
 
     if (!usage.length) {
-      return null; // No usage found for the user
+      return {
+        mostFrequentTool: null,
+        totalUsageNumber: 0,
+        totalWordCount: 0,
+        mostInDayUsage: null,
+        firstAiUsage: null,
+      };
     }
 
-    const toolFrequency = usage.reduce(
-      (acc, usageEntry) => {
-        acc[usageEntry.toolName] = (acc[usageEntry.toolName] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-
+    const toolFrequency: Record<string, number> = {};
+    for (const entry of usage) {
+      toolFrequency[entry.toolName] = (toolFrequency[entry.toolName] || 0) + 1;
+    }
     const mostFrequentTool = Object.keys(toolFrequency).reduce((a, b) =>
       toolFrequency[a] > toolFrequency[b] ? a : b,
     );
 
-    return mostFrequentTool;
+    const totalUsageNumber = usage.length;
+
+    let totalWordCount = 0;
+    for (const entry of usage) {
+      const wordCount = entry.result.split(/\s+/).filter(Boolean).length;
+      totalWordCount += wordCount;
+    }
+
+    const sortedUsage = usage
+      .slice()
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    const firstAiUsage = sortedUsage[0].timestamp;
+
+    const dayCounts: Record<string, number> = {};
+    for (const entry of usage) {
+      const day = entry.timestamp.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+      dayCounts[day] = (dayCounts[day] || 0) + 1;
+    }
+    const mostUsedDayStr = Object.keys(dayCounts).reduce((a, b) =>
+      dayCounts[a] > dayCounts[b] ? a : b,
+    );
+    const mostInDayUsage = new Date(mostUsedDayStr);
+
+    return {
+      mostFrequentTool,
+      totalUsageNumber,
+      totalWordCount,
+      mostInDayUsage,
+      firstAiUsage,
+    };
   }
 
   async getUsageByDocument(documentId: number): Promise<AiToolUsage[]> {
@@ -64,36 +117,31 @@ export class AiToolUsageService {
   async checkGrammar(userId: number, text: string, documentId?: number) {
     return this.processAiTool('Grammar Checker', userId, text, documentId, {
       role: 'system',
-      content: `You are a grammar checker.`,
+      content: `You are a grammar checker. Give back only the corrected text`,
     });
   }
 
   async analyzeTone(userId: number, text: string, documentId?: number) {
     return this.processAiTool('Tone Analyzer', userId, text, documentId, {
       role: 'system',
-      content:
-        'You are a tone analyzer. Analyze the tone of the following text.',
+      content: `You MUST NOT write the text again. Give the tone rate in format ... of 100 where 1 is an informal text with a couple mistakes and 100 is a well-written formal text without mistakes.
+          Also, shortly tell what is wrong with the text. You MUST NOT correct these mistakes.`,
     });
   }
 
   async summarizeText(userId: number, text: string, documentId?: number) {
     return this.processAiTool('Summarization', userId, text, documentId, {
       role: 'system',
-      content: 'Summarize the following text.',
+      content:
+        'You are a text summarizer. In 2-4 sentences paraphrase the text',
     });
   }
 
   async rephraseText(userId: number, text: string, documentId?: number) {
     return this.processAiTool('Rephrasing', userId, text, documentId, {
       role: 'system',
-      content: 'Rephrase and simplify the following text.',
-    });
-  }
-
-  async autocompleteText(userId: number, text: string, documentId?: number) {
-    return this.processAiTool('Autocomplete', userId, text, documentId, {
-      role: 'system',
-      content: 'Complete the following text.',
+      content:
+        'You are a text simplifier. Rephrase and simplify the following text.',
     });
   }
 
@@ -112,7 +160,8 @@ export class AiToolUsageService {
   async extractKeywords(userId: number, text: string, documentId?: number) {
     return this.processAiTool('Keyword Extraction', userId, text, documentId, {
       role: 'system',
-      content: 'Extract the key phrases from the following text.',
+      content:
+        'Extract the key words and phrases from the following text. Do not write too much text',
     });
   }
 
@@ -131,7 +180,9 @@ export class AiToolUsageService {
       documentId,
       {
         role: 'system',
-        content: 'Analyze the readability of the following text.',
+        content: `You MUST NOT write the text again.
+          Give the rate in format ... of 100 where 1 is a text that is read difficult and 100 is a text that can be read very easily .
+          Also, shortly tell what is wrong with the text. You MUST NOT correct these mistakes.`,
       },
     );
   }
@@ -139,7 +190,7 @@ export class AiToolUsageService {
   async generateTitle(userId: number, text: string, documentId?: number) {
     return this.processAiTool('Title Generation', userId, text, documentId, {
       role: 'system',
-      content: 'Generate a title for the following text.',
+      content: 'Generate a title for the following text. Maximum 5 words',
     });
   }
 
@@ -158,7 +209,7 @@ export class AiToolUsageService {
             role: 'system',
             content:
               systemMessage.content +
-              ' Provide the corrected text as a single continuous paragraph without any line breaks, special symbols, or markdown formatting.',
+              ' Provide your response as a single continuous paragraph without any line breaks, special symbols, or markdown formatting.',
           },
           { role: 'user', content: text },
         ],
@@ -167,13 +218,18 @@ export class AiToolUsageService {
       let result = response.choices[0]?.message?.content || '';
       result = this.cleanText(result);
 
-      const aiToolUsage = this.aiToolUsageRepository.create({
-        user: { id: userId } as User,
-        document: documentId ? ({ id: documentId } as Document) : undefined,
-        toolName,
-        sentText: text,
-        result,
-      });
+      // --- Create a new entity explicitly. ---
+      const aiToolUsage = new AiToolUsage();
+      aiToolUsage.user = { id: userId } as User;
+      aiToolUsage.toolName = toolName;
+      aiToolUsage.sentText = text;
+      aiToolUsage.result = result;
+
+      if (documentId) {
+        aiToolUsage.document = { id: documentId } as Document;
+      }
+
+      // Now save the new instance (which is definitely an insert, not an update).
       return await this.aiToolUsageRepository.save(aiToolUsage);
     } catch (error) {
       console.error(`${toolName} error:`, error.message);

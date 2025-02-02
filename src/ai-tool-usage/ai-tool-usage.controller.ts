@@ -6,6 +6,7 @@ import {
   Post,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common';
 import { AiToolUsageService } from './ai-tool-usage.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -16,17 +17,24 @@ export class AiToolUsageController {
   constructor(private readonly aiToolUsageService: AiToolUsageService) {}
 
   @Get('user')
-  async getUsageByUser(@Req() req) {
-    const userId = req.user.userId; // Extract userId from JWT payload
-    return this.aiToolUsageService.getUsageByUser(userId);
+  async getUsageByUser(
+    @Req() req,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '5',
+  ) {
+    const userId = req.user.id; // Extract userId from JWT payload
+    // Convert page and limit to numbers
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    return this.aiToolUsageService.getUsageByUser(userId, pageNum, limitNum);
   }
 
+  // Statistics endpoint
   @Get('user/most-used-tool')
   async getMostFrequentAiTool(@Req() req: any) {
-    const userId = req.user.id; // Extract user ID from the JWT payload
-    const mostUsedTool =
-      await this.aiToolUsageService.getMostFrequentAiTool(userId);
-    return { mostUsedTool };
+    const userId = req.user.id; // Extract user ID from JWT payload
+    const stats = await this.aiToolUsageService.getMostFrequentAiTool(userId);
+    return stats;
   }
 
   @Get('document/:documentId')
@@ -40,7 +48,7 @@ export class AiToolUsageController {
     @Body('text') text: string,
     @Param('documentId') documentId?: number,
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     return this.aiToolUsageService.checkGrammar(userId, text, documentId);
   }
 
@@ -50,7 +58,8 @@ export class AiToolUsageController {
     @Body('text') text: string,
     @Param('documentId') documentId?: number,
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
+
     return this.aiToolUsageService.analyzeTone(userId, text, documentId);
   }
 
@@ -60,7 +69,7 @@ export class AiToolUsageController {
     @Body('text') text: string,
     @Param('documentId') documentId?: number,
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     return this.aiToolUsageService.summarizeText(userId, text, documentId);
   }
 
@@ -70,18 +79,8 @@ export class AiToolUsageController {
     @Body('text') text: string,
     @Param('documentId') documentId?: number,
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     return this.aiToolUsageService.rephraseText(userId, text, documentId);
-  }
-
-  @Post('autocomplete/:documentId?')
-  async autocompleteText(
-    @Req() req,
-    @Body('text') text: string,
-    @Param('documentId') documentId?: number,
-  ) {
-    const userId = req.user.userId;
-    return this.aiToolUsageService.autocompleteText(userId, text, documentId);
   }
 
   @Post('translation/:documentId?')
@@ -91,7 +90,7 @@ export class AiToolUsageController {
     @Body('targetLanguage') targetLanguage: string,
     @Param('documentId') documentId?: number,
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     return this.aiToolUsageService.translateText(
       userId,
       text,
@@ -106,7 +105,7 @@ export class AiToolUsageController {
     @Body('text') text: string,
     @Param('documentId') documentId?: number,
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     return this.aiToolUsageService.extractKeywords(userId, text, documentId);
   }
 
@@ -116,7 +115,7 @@ export class AiToolUsageController {
     @Body('prompt') prompt: string,
     @Param('documentId') documentId?: number,
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     return this.aiToolUsageService.generateText(userId, prompt, documentId);
   }
 
@@ -126,7 +125,7 @@ export class AiToolUsageController {
     @Body('text') text: string,
     @Param('documentId') documentId?: number,
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     return this.aiToolUsageService.analyzeReadability(userId, text, documentId);
   }
 
@@ -136,7 +135,7 @@ export class AiToolUsageController {
     @Body('text') text: string,
     @Param('documentId') documentId?: number,
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     return this.aiToolUsageService.generateTitle(userId, text, documentId);
   }
 }
