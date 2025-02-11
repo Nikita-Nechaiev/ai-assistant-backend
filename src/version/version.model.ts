@@ -17,15 +17,12 @@ export class Version {
   })
   document: Document;
 
-  @Column('text')
-  content: string;
-
-  @Column('json', { nullable: true })
-  richContent: object | null;
+  @Column()
+  richContent: string;
 
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ type: 'json', nullable: true })
-  metadata: object | null;
+  @Column()
+  userEmail: string;
 }

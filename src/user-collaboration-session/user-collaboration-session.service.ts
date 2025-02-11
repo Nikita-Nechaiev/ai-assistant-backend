@@ -6,7 +6,6 @@ import {
   Permission,
 } from './user-collaboration-session.model';
 import { UsersService } from 'src/user/users.service';
-import { AnalyticsSummaryService } from 'src/analytics-summary/analytics-summary.service'; // Assuming this service exists
 
 @Injectable()
 export class UserCollaborationSessionService {
@@ -14,7 +13,6 @@ export class UserCollaborationSessionService {
     @InjectRepository(UserCollaborationSession)
     private readonly userCollabSessionRepository: Repository<UserCollaborationSession>,
     private readonly userService: UsersService,
-    // private readonly analyticsSummaryService: AnalyticsSummaryService, // Injected AnalyticsSummaryService
   ) {}
 
   async getUserCollaborationSessions(
@@ -72,13 +70,6 @@ export class UserCollaborationSessionService {
 
     await this.userCollabSessionRepository.save(session);
 
-    // const hoursSpent = timeSpent / (1000 * 60 * 60); // Convert milliseconds to hours
-
-    // await this.analyticsSummaryService.updateAnalytics(userId, {
-    //   activeHours:
-    //     (session.user.analyticsSummary.activeHours || 0) + hoursSpent,
-    // });
-
     return session;
   }
 
@@ -122,14 +113,6 @@ export class UserCollaborationSessionService {
     if (!session) {
       throw new Error('User Collaboration Session not found');
     }
-
-    // Decrement totalSessions in AnalyticsSummary
-    // await this.analyticsSummaryService.updateAnalytics(session.user.id, {
-    //   totalSessions: Math.max(
-    //     0,
-    //     session.user.analyticsSummary.totalSessions - 1,
-    //   ),
-    // });
 
     await this.userCollabSessionRepository.remove(session);
   }

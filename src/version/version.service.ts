@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Version } from './version.model';
+import { Document } from 'src/document/document.model';
 
 @Injectable()
 export class VersionService {
@@ -10,26 +11,34 @@ export class VersionService {
     private readonly versionRepository: Repository<Version>,
   ) {}
 
-  async createVersion(
-    documentId: number,
-    content: string,
-    richContent: object | null,
-    metadata: object | null,
-  ): Promise<Version> {
-    const version = this.versionRepository.create({
-      document: { id: documentId },
-      content,
-      richContent,
-      metadata,
-    });
-
-    return this.versionRepository.save(version);
-  }
-
   async getVersionsByDocument(documentId: number): Promise<Version[]> {
     return this.versionRepository.find({
       where: { document: { id: documentId } },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async createVersion(
+    document: Document,
+    richContent: any,
+    userEmail: string,
+  ): Promise<Version> {
+    const version = this.versionRepository.create({
+      document,
+      richContent,
+      userEmail,
+    });
+    return this.versionRepository.save(version);
+  }
+
+  async findById(versionId: number): Promise<Version> {
+    const version = await this.versionRepository.findOne({
+      where: { id: versionId },
+      relations: ['document'], // Ensure the associated document is loaded.
+    });
+    if (!version) {
+      throw new NotFoundException(`Version with id ${versionId} not found`);
+    }
+    return version;
   }
 }

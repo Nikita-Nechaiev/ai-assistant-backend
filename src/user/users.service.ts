@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Role, User } from './user.model';
 import * as bcrypt from 'bcrypt';
-import { AnalyticsSummaryService } from 'src/analytics-summary/analytics-summary.service';
 import { SettingsService } from 'src/settings/settings.service';
 
 @Injectable()

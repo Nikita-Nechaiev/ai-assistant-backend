@@ -1,5 +1,4 @@
 import { AiToolUsage } from 'src/ai-tool-usage/ai-tool-usage.model';
-import { AnalyticsSummary } from 'src/analytics-summary/analytics-summary.model';
 import { Invitation } from 'src/invitation/invitation.model';
 import { Settings } from 'src/settings/settings.model';
 import { UserCollaborationSession } from 'src/user-collaboration-session/user-collaboration-session.model';
@@ -65,8 +64,4 @@ export class User {
   @OneToOne(() => Settings, (settings) => settings.user, { cascade: true })
   @JoinColumn()
   settings: Settings;
-
-  @JoinColumn()
-  @OneToOne(() => AnalyticsSummary, (analyticsSummary) => analyticsSummary.user)
-  analyticsSummary: AnalyticsSummary;
 }

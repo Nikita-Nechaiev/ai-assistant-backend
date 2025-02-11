@@ -11,14 +11,8 @@ import {
 import { Server, Socket } from 'socket.io';
 import { parse } from 'cookie';
 import { verify } from 'jsonwebtoken';
-import {
-  Logger,
-  UnauthorizedException,
-  ForbiddenException,
-  UseGuards,
-} from '@nestjs/common';
+import { Logger, UnauthorizedException } from '@nestjs/common';
 
-// Сервисы и модели
 import { CollaborationSessionService } from './collaboration-session.service';
 import { UserCollaborationSessionService } from 'src/user-collaboration-session/user-collaboration-session.service';
 import { DocumentService } from 'src/document/document.service';
@@ -32,8 +26,9 @@ import { UsersService } from 'src/user/users.service';
 import { MessagesService } from 'src/messages/messages.service';
 import { AuthService } from 'src/auth/auth.service';
 import { User } from 'src/user/user.model';
-import { Document } from 'src/document/document.model';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { AiToolUsageService } from 'src/ai-tool-usage/ai-tool-usage.service';
+import { VersionService } from 'src/version/version.service';
 
 @WebSocketGateway({
   path: '/collaboration-session-socket',
@@ -63,6 +58,8 @@ export class CollaborationSessionGateway
     private readonly collaborationSessionService: CollaborationSessionService,
     private readonly messagesService: MessagesService,
     private readonly authService: AuthService,
+    private readonly aiToolUsageService: AiToolUsageService,
+    private readonly versionService: VersionService,
   ) {}
 
   afterInit(server: Server) {
@@ -100,7 +97,6 @@ export class CollaborationSessionGateway
           refreshToken = newRefreshToken;
           decoded = verify(accessToken, process.env.JWT_ACCESS_SECRET);
 
-          // Обновим cookies в handshake
           client.handshake.headers.cookie = `accessToken=${accessToken}; refreshToken=${refreshToken}`;
           client.emit('refreshedTokens', {
             accessToken,
@@ -117,7 +113,6 @@ export class CollaborationSessionGateway
 
       client.data.userId = Number(decoded.sub);
 
-      // ----> Сразу добавляем в dashboard-комнату
       const roomName = `dashboard_${client.data.userId}`;
       client.join(roomName);
       this.logger.log(`User ${client.data.userId} auto-joined: ${roomName}`);
@@ -134,21 +129,17 @@ export class CollaborationSessionGateway
     if (userId) {
       const userData = this.onlineUsers.get(userId);
       if (userData) {
-        // Удаляем этот сокет из множества
         userData.socketIds.delete(client.id);
 
-        // Если сокетов не осталось — пользователь окончательно вышел
         if (userData.socketIds.size === 0) {
           const timeSpentSeconds = (Date.now() - userData.startTime) / 1000;
 
-          // Обновляем в БД время нахождения
           await this.userCollaborationSessionService.updateTimeSpent(
             userId,
             sessionId,
             timeSpentSeconds,
           );
 
-          // Обновляем lastInteracted на дату выхода (текущее время)
           await this.userCollaborationSessionService.updateLastInteracted(
             userId,
             sessionId,
@@ -159,21 +150,18 @@ export class CollaborationSessionGateway
             `User ${userId} spent ${timeSpentSeconds}s in the session (${sessionId}).`,
           );
 
-          // Уведомляем сессию, что пользователь вышел
           this.server.to(`session_${sessionId}`).emit('userLeft', { userId });
 
-          // Удаляем запись о пользователе
           this.onlineUsers.delete(userId);
         }
       }
     }
 
-    // Удаляем сам сокет из socketSessionMap
     this.socketSessionMap.delete(client.id);
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  // ====================== ЛОГИКA ДЛЯ DASHBOARD / УВЕДОМЛЕНИЙ ====================== //
+  // ====================== LOGIC FOR DASHBOARD / NOTIFICATIONS ====================== //
   @SubscribeMessage('joinDashboard')
   async handleJoinDashboard(@ConnectedSocket() client: Socket) {
     const userId = client.data.userId;
@@ -182,13 +170,11 @@ export class CollaborationSessionGateway
       return;
     }
 
-    // Create a personal room for the user
     const roomName = `dashboard_${userId}`;
     client.join(roomName);
 
     this.logger.log(`User ${userId} joined dashboard room: ${roomName}`);
 
-    // Fetch notifications through the service
     const notifications = await this.invitationService.findByReceiverId(userId);
     client.emit('notifications', notifications);
   }
@@ -201,7 +187,6 @@ export class CollaborationSessionGateway
       return;
     }
 
-    // Fetch notifications through the service
     const notifications = await this.invitationService.findByReceiverId(userId);
     client.emit('notifications', notifications);
   }
@@ -218,7 +203,6 @@ export class CollaborationSessionGateway
     }
 
     try {
-      // Call the service method to update the notification status
       const updatedInvitation = await this.invitationService.update(
         data.invitationId,
         {
@@ -269,7 +253,6 @@ export class CollaborationSessionGateway
         .to(dashboardRoom)
         .emit('notificationDeleted', { invitationId: data.invitationId });
 
-      // Also emit to the client who triggered it
       client.emit('notificationDeleted', { invitationId: data.invitationId });
 
       this.logger.log(
@@ -301,7 +284,6 @@ export class CollaborationSessionGateway
       const sessionRoom = `session_${invitation.session.id}`;
       const dashboardRoom = `dashboard_${userId}`;
 
-      // Notify user and broadcast event to all relevant rooms
       client.emit('invitationAccepted', {
         invitationId: invitation.id,
         sessionId: invitation.session.id,
@@ -319,7 +301,7 @@ export class CollaborationSessionGateway
     }
   }
 
-  /* =============================== ЛОГИКA ДЛЯ SESSION ============================================================================================== */
+  /* =============================== SESSION LOGIC ============================================================================================== */
   @SubscribeMessage('joinSession')
   async handleJoinSession(
     @MessageBody('sessionId') sessionId: number,
@@ -327,10 +309,8 @@ export class CollaborationSessionGateway
   ) {
     const userId = client.data.userId;
 
-    // 1) Запоминаем сессию, связав её с текущим сокетом
     this.socketSessionMap.set(client.id, sessionId);
 
-    // 2) Ищем связь user-сессия для подсчёта времени
     const userSession =
       await this.userCollaborationSessionService.findByUserAndSession(
         userId,
@@ -341,7 +321,6 @@ export class CollaborationSessionGateway
     let existingData = this.onlineUsers.get(userId);
 
     if (!existingData) {
-      // Пользователь заходит впервые
       this.onlineUsers.set(userId, {
         sessionId,
         startTime: Date.now(),
@@ -356,19 +335,14 @@ export class CollaborationSessionGateway
       client.emit('currentTime', { totalTime: currentTime });
     }
 
-    // Присоединяемся к socket.io комнате
     client.join(`session_${sessionId}`);
 
-    // 3) Получаем полные данные сессии (включая userCollaborationSessions)
     const sessionData =
       await this.collaborationSessionService.getSession(sessionId);
 
-    // 4) Фильтруем только «онлайн» участников из sessionData.userCollaborationSessions
-    //    через структуру this.onlineUsers (в которой хранится userId -> { sessionId, ... })
     const onlineUserSessions = sessionData.userCollaborationSessions.filter(
       (ucs) => {
         const onlineData = this.onlineUsers.get(ucs.user.id);
-        // «Онлайн», если есть запись в this.onlineUsers и sessionId совпадает
         return onlineData && onlineData.sessionId === sessionId;
       },
     );
@@ -382,10 +356,9 @@ export class CollaborationSessionGateway
       permissions: ucs.permissions,
     }));
 
-    // 6) Отправляем «обновленную» сессию вместе со списком онлайн-участников
     this.server.to(`session_${sessionId}`).emit('sessionData', {
       session: sessionData,
-      users: onlineCollaborators, // ICollaborator[]
+      users: onlineCollaborators,
     });
 
     this.logger.log(
@@ -401,111 +374,294 @@ export class CollaborationSessionGateway
     client.to(`session_${sessionId}`).emit('userLeft', { userId });
   }
 
-  /* =============================== ЛОГИКA ДЛЯ DOCUMENT ============================================================================================== */
-
-  @SubscribeMessage('updateDocument')
-  @Roles(Permission.EDIT)
-  async handleUpdateDocument(
-    @MessageBody('documentId') documentId: number,
-    @MessageBody('updates')
-    updates: Partial<Pick<Document, 'content' | 'richContent' | 'title'>>,
+  /* =============================== DOCUMENT LOGIC ============================================================================================== */
+  @SubscribeMessage('changeDocumentTitle')
+  async handleChangeDocumentTitle(
+    @MessageBody() data: { documentId: number; newTitle: string },
     @ConnectedSocket() client: Socket,
   ) {
-    try {
-      const userId = client.data.userId;
-      const userSession =
-        await this.userCollaborationSessionService.findByUserAndSession(
-          userId,
-          documentId,
-        );
-
-      if (!userSession.permissions.includes(Permission.EDIT)) {
-        throw new ForbiddenException(
-          'You do not have permission to edit this document',
-        );
-      }
-
-      const updatedDocument = await this.documentService.updateContent(
-        documentId,
-        updates,
-        // If you need the actual user object, fetch from DB:
-        { name: 'WebSocket User', email: 'socket@example.com', id: userId },
-      );
-
-      const sessionId = updatedDocument.collaborationSession.id;
-      client
-        .to(`session_${sessionId}`)
-        .emit('documentUpdated', updatedDocument);
-
-      this.logger.log(`Document ${documentId} updated by User ${userId}`);
-      return updatedDocument;
-    } catch (error) {
-      this.logger.error(`Error updating document: ${error.message}`);
-      throw error;
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
     }
+
+    const updatedDocument = await this.documentService.changeDocumentTitle(
+      data.documentId,
+      data.newTitle,
+    );
+
+    this.server
+      .to(`session_${sessionId}`)
+      .emit('documentUpdated', updatedDocument);
   }
 
   @SubscribeMessage('createDocument')
-  @Roles(Permission.EDIT)
   async handleCreateDocument(
-    @MessageBody('sessionId') sessionId: number,
-    @MessageBody('title') title: string,
+    @MessageBody() data: { title: string },
     @ConnectedSocket() client: Socket,
   ) {
-    try {
-      const userId = client.data.userId;
-      const userSession =
-        await this.userCollaborationSessionService.findByUserAndSession(
-          userId,
-          sessionId,
-        );
+    const sessionId = this.socketSessionMap.get(client.id);
 
-      if (!userSession.permissions.includes(Permission.EDIT)) {
-        throw new ForbiddenException(
-          'You do not have permission to create documents',
-        );
-      }
-
-      const newDocument = await this.documentService.createDocument(
-        title,
-        sessionId,
-        userId,
-      );
-
-      this.server.to(`session_${sessionId}`).emit('newDocument', newDocument);
-      this.logger.log(`Document "${title}" created by User ${userId}`);
-      return newDocument;
-    } catch (error) {
-      this.logger.error(`Error creating document: ${error.message}`);
-      throw error;
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
     }
+
+    const user = await this.userService.findById(client.data.userId);
+    const newDocument = await this.documentService.createDocument(
+      sessionId,
+      user.email,
+      data.title,
+    );
+
+    this.server.to(`session_${sessionId}`).emit('documentCreated', newDocument);
   }
 
   @SubscribeMessage('deleteDocument')
-  @Roles(Permission.EDIT)
   async handleDeleteDocument(
-    @MessageBody('documentId') documentId: number,
+    @MessageBody() data: { documentId: number },
     @ConnectedSocket() client: Socket,
   ) {
-    try {
-      const userId = client.data.userId;
-      await this.documentService.deleteDocument(documentId, userId);
-      client.emit('documentDeleted', { documentId });
-    } catch (error) {
-      this.logger.error(`Error deleting document: ${error.message}`);
-      throw error;
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
     }
+
+    await this.documentService.deleteDocument(data.documentId);
+
+    this.server
+      .to(`session_${sessionId}`)
+      .emit('documentDeleted', { documentId: data.documentId });
   }
 
   @SubscribeMessage('duplicateDocument')
-  @Roles(Permission.EDIT)
   async handleDuplicateDocument(
-    @MessageBody('documentId') documentId: number,
+    @MessageBody() data: { documentId: number },
     @ConnectedSocket() client: Socket,
   ) {
-    const duplicatedDocument =
-      await this.documentService.duplicateDocument(documentId);
-    client.emit('documentDuplicated', duplicatedDocument);
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
+    }
+
+    const user = await this.userService.findById(client.data.userId);
+    const duplicate = await this.documentService.duplicateDocument(
+      data.documentId,
+      user.email,
+    );
+
+    console.log('duplicate', duplicate);
+
+    this.server
+      .to(`session_${sessionId}`)
+      .emit('documentDuplicated', duplicate);
+  }
+
+  @SubscribeMessage('getSessionDocuments')
+  async handleGetSessionDocuments(@ConnectedSocket() client: Socket) {
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
+    }
+
+    const documents = await this.documentService.getSessionDocuments(sessionId);
+
+    client.emit('sessionDocuments', documents);
+  }
+
+  @SubscribeMessage('changeContentAndSaveDocument')
+  async handleChangeContentAndSaveDocument(
+    @MessageBody() data: { documentId: number; newContent: any },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
+    }
+
+    const user = await this.userService.findById(client.data.userId);
+    const updatedDocument =
+      await this.documentService.changeContentAndSaveDocument(
+        data.documentId,
+        data.newContent,
+        user.email,
+      );
+
+    this.server
+      .to(`session_${sessionId}`)
+      .emit('documentUpdated', updatedDocument);
+  }
+
+  @SubscribeMessage('applyVersion')
+  async handleApplyVersion(
+    @MessageBody() data: { documentId: number; versionId: number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
+    }
+
+    const user = await this.userService.findById(client.data.userId);
+    const updatedDocument = await this.documentService.applyVersion(
+      data.documentId,
+      data.versionId,
+      user.email,
+    );
+
+    this.server
+      .to(`session_${sessionId}`)
+      .emit('documentUpdated', updatedDocument);
+  }
+
+  @SubscribeMessage('getDocument')
+  async handleGetDocument(
+    @MessageBody() data: { documentId: number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
+    }
+
+    const document = await this.documentService.findById(data.documentId);
+    client.emit('documentData', document);
+  }
+
+  @SubscribeMessage('getDocumentAiUsage')
+  async handleGetDocumentAiUsage(
+    @MessageBody() data: { documentId: number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
+    }
+    const usage = await this.aiToolUsageService.getUsageByDocument(
+      data.documentId,
+    );
+    this.server.to(`session_${sessionId}`).emit('documentAiUsage', usage);
+  }
+
+  @SubscribeMessage('createDocumentAiUsage')
+  async handleCreateDocumentAiUsage(
+    @MessageBody()
+    data: {
+      toolName: string;
+      text: string;
+      documentId: number;
+      targetLanguage?: string;
+    },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
+    }
+    const user = await this.userService.findById(client.data.userId);
+    let usage;
+    switch (data.toolName) {
+      case 'grammar-check':
+        usage = await this.aiToolUsageService.checkGrammar(
+          user.id,
+          data.text,
+          data.documentId,
+        );
+        break;
+      case 'tone-analysis':
+        usage = await this.aiToolUsageService.analyzeTone(
+          user.id,
+          data.text,
+          data.documentId,
+        );
+        break;
+      case 'summarization':
+        usage = await this.aiToolUsageService.summarizeText(
+          user.id,
+          data.text,
+          data.documentId,
+        );
+        break;
+      case 'rephrase':
+        usage = await this.aiToolUsageService.rephraseText(
+          user.id,
+          data.text,
+          data.documentId,
+        );
+        break;
+      case 'translation':
+        if (!data.targetLanguage) {
+          client.emit('error', 'targetLanguage is required for Translation');
+          return;
+        }
+        usage = await this.aiToolUsageService.translateText(
+          user.id,
+          data.text,
+          data.targetLanguage,
+          data.documentId,
+        );
+        break;
+      case 'keyword-extraction':
+        usage = await this.aiToolUsageService.extractKeywords(
+          user.id,
+          data.text,
+          data.documentId,
+        );
+        break;
+      case 'text-generation':
+        usage = await this.aiToolUsageService.generateText(
+          user.id,
+          data.text,
+          data.documentId,
+        );
+        break;
+      case 'readability-analysis':
+        usage = await this.aiToolUsageService.analyzeReadability(
+          user.id,
+          data.text,
+          data.documentId,
+        );
+        break;
+      case 'title-generation':
+        usage = await this.aiToolUsageService.generateTitle(
+          user.id,
+          data.text,
+          data.documentId,
+        );
+        break;
+      default:
+        client.emit('error', 'Unsupported tool name');
+        return;
+    }
+
+    this.server
+      .to(`session_${sessionId}`)
+      .emit('documentAiUsageCreated', usage);
+  }
+
+  @SubscribeMessage('getVersions')
+  async handleGetVersions(
+    @MessageBody() data: { documentId: number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session ID not found for this socket');
+      return;
+    }
+    const versions = await this.versionService.getVersionsByDocument(
+      data.documentId,
+    );
+    client.emit('versionsData', versions);
   }
 
   /* ================================ ЛОГИКA ДЛЯ INVITATION ============================================================================================= */
@@ -542,7 +698,6 @@ export class CollaborationSessionGateway
         return;
       }
 
-      // Check if the user is already in the session
       const isAlreadyInSession =
         await this.userCollaborationSessionService.findByUserAndSession(
           receiver.id,
@@ -557,7 +712,6 @@ export class CollaborationSessionGateway
         return;
       }
 
-      // Check if the user already has a pending invitation
       const existingInvitation =
         await this.invitationService.findByReceiverAndSession(
           receiver.id,

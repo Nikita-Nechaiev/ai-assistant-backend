@@ -5,7 +5,6 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { DocumentModule } from './document/document.module';
 import { AiToolUsageModule } from './ai-tool-usage/ai-tool-usage.module';
-import { AnalyticsSummaryModule } from './analytics-summary/analytics-summary.module';
 import { CollaborationSessionModule } from './collaboration-session/collaboration-session.module';
 import { EmailModule } from './email/email.module';
 import { UserCollaborationSessionModule } from './user-collaboration-session/user-collaboration-session.module';
@@ -36,7 +35,6 @@ import { TokenModule } from './token/token.module';
     AuthModule,
     DocumentModule,
     AiToolUsageModule,
-    AnalyticsSummaryModule,
     CollaborationSessionModule,
     EmailModule,
     UserCollaborationSessionModule,

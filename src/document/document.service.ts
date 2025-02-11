@@ -1,145 +1,165 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Document } from './document.model';
-import { AiToolUsage } from 'src/ai-tool-usage/ai-tool-usage.model';
-import { AiToolUsageService } from 'src/ai-tool-usage/ai-tool-usage.service';
 import { VersionService } from 'src/version/version.service';
-import { AnalyticsSummaryService } from 'src/analytics-summary/analytics-summary.service';
 
 @Injectable()
 export class DocumentService {
   constructor(
     @InjectRepository(Document)
     private readonly documentRepository: Repository<Document>,
-    private readonly aiToolUsageService: AiToolUsageService,
     private readonly versionService: VersionService,
-    // private readonly analyticsSummaryService: AnalyticsSummaryService,
   ) {}
 
-  async createDocument(
-    title: string,
-    collaborationSessionId: number,
-    userId: number, // Add userId as a parameter
-    content?: string,
-    richContent?: object,
-  ): Promise<Document> {
-    const document = this.documentRepository.create({
-      title,
-      content,
-      richContent,
-      collaborationSession: { id: collaborationSessionId },
-    });
-
-    const savedDocument = await this.documentRepository.save(document);
-
-    // Retrieve analytics and update totalDocuments
-    // const analytics =
-    //   await this.analyticsSummaryService.getUserAnalytics(userId);
-
-    // await this.analyticsSummaryService.updateAnalytics(userId, {
-    //   totalDocuments: analytics.totalDocuments + 1,
-    // });
-
-    await this.versionService.createVersion(
-      savedDocument.id,
-      content || '',
-      richContent || null,
-      { createdBy: 'system', initialVersion: true }, // Metadata for the initial version
-    );
-
-    return savedDocument;
-  }
-
-  async deleteDocument(id: number, userId: number): Promise<void> {
+  async findById(documentId: number): Promise<Document> {
     const document = await this.documentRepository.findOne({
-      where: { id },
+      where: { id: documentId },
     });
-
     if (!document) {
-      throw new Error('Document not found');
+      throw new NotFoundException(`Document with id ${documentId} not found`);
     }
-
-    // Retrieve analytics and update totalDocuments
-    // const analytics =
-    //   await this.analyticsSummaryService.getUserAnalytics(userId);
-
-    // await this.analyticsSummaryService.updateAnalytics(userId, {
-    //   totalDocuments: Math.max(analytics.totalDocuments - 1, 0), // Ensure totalDocuments doesn't go below 0
-    // });
-
-    await this.documentRepository.remove(document);
+    return document;
   }
 
-  async duplicateDocument(id: number): Promise<Document> {
-    const original = await this.documentRepository.findOne({ where: { id } });
-
-    if (!original) {
-      throw new Error('Original document not found');
-    }
-
-    const duplicate = this.documentRepository.create({
-      ...original,
-      id: undefined,
-      title: `${original.title} (Copy)`,
-    });
-
-    return this.documentRepository.save(duplicate);
-  }
-
-  async updateContent(
-    id: number,
-    updates: DeepPartial<Pick<Document, 'content' | 'richContent' | 'title'>>,
-    user: { name: string; email: string; id: number }, // Информация о пользователе, который делает изменения
+  async changeDocumentTitle(
+    documentId: number,
+    newTitle: string,
   ): Promise<Document> {
-    // Найти документ
-    const document = await this.documentRepository.findOne({ where: { id } });
-
+    const document = await this.documentRepository.findOne({
+      where: { id: documentId },
+    });
     if (!document) {
-      throw new Error('Document not found');
+      throw new NotFoundException(`Document with id ${documentId} not found`);
     }
 
-    await this.versionService.createVersion(
-      id,
-      document.content || '',
-      document.richContent || null,
-      {
-        updatedBy: user.name,
-        updatedByEmail: user.email,
-        timestamp: new Date().toISOString(),
-      },
-    );
-
-    Object.assign(document, updates, { lastUpdated: new Date() });
+    document.title = newTitle;
     const updatedDocument = await this.documentRepository.save(document);
 
     return updatedDocument;
   }
 
-  async updateStatistics(id: number): Promise<Document> {
-    const document = await this.documentRepository.findOne({ where: { id } });
+  async createDocument(
+    sessionId: number,
+    userEmail: string,
+    title: string,
+  ): Promise<Document> {
+    const newDocument = this.documentRepository.create({
+      title,
+      richContent: '',
+      collaborationSession: { id: sessionId } as any,
+    });
 
-    if (!document) {
-      throw new Error('Document not found');
-    }
+    const savedDocument = await this.documentRepository.save(newDocument);
 
-    if (!document.content) {
-      throw new Error('Document content is required to analyze statistics');
-    }
-
-    // Analyze text metrics using AiToolUsageService
-    const { readabilityScore, toneAnalysis } =
-      await this.aiToolUsageService.analyzeTextMetrics(document.content);
-
-    // Update the document statistics
-    document.readabilityScore = readabilityScore;
-    document.toneAnalysis = toneAnalysis;
-    document.lastUpdated = new Date();
-
-    return this.documentRepository.save(document);
+    await this.versionService.createVersion(
+      savedDocument,
+      savedDocument.richContent,
+      userEmail,
+    );
+    return savedDocument;
   }
 
-  async getAiToolUsageForDocument(documentId: number) {
-    return this.aiToolUsageService.getUsageByDocument(documentId);
+  async deleteDocument(documentId: number): Promise<void> {
+    const document = await this.documentRepository.findOne({
+      where: { id: documentId },
+    });
+    if (!document) {
+      throw new NotFoundException(`Document with id ${documentId} not found`);
+    }
+
+    await this.documentRepository.remove(document);
+  }
+
+  async duplicateDocument(
+    documentId: number,
+    userEmail: string,
+  ): Promise<Document> {
+    const originalDocument = await this.documentRepository.findOne({
+      where: { id: documentId },
+      relations: ['collaborationSession'],
+    });
+    if (!originalDocument) {
+      throw new NotFoundException(`Document with id ${documentId} not found`);
+    }
+
+    const duplicate = this.documentRepository.create({
+      title: originalDocument.title + ' (Copy)',
+      richContent: originalDocument.richContent,
+      collaborationSession: originalDocument.collaborationSession,
+    });
+
+    const savedDuplicate = await this.documentRepository.save(duplicate);
+
+    await this.versionService.createVersion(
+      savedDuplicate,
+      savedDuplicate.richContent,
+      userEmail,
+    );
+    return savedDuplicate;
+  }
+
+  async getSessionDocuments(sessionId: number): Promise<Document[]> {
+    return await this.documentRepository.find({
+      where: {
+        collaborationSession: { id: sessionId },
+      },
+      order: {
+        lastUpdated: 'DESC',
+      },
+    });
+  }
+
+  async changeContentAndSaveDocument(
+    documentId: number,
+    newContent: any,
+    userEmail: string,
+  ): Promise<Document> {
+    const document = await this.documentRepository.findOne({
+      where: { id: documentId },
+    });
+    if (!document) {
+      throw new NotFoundException(`Document with id ${documentId} not found`);
+    }
+
+    document.richContent = newContent;
+    const updatedDocument = await this.documentRepository.save(document);
+
+    await this.versionService.createVersion(
+      updatedDocument,
+      newContent,
+      userEmail,
+    );
+    return updatedDocument;
+  }
+
+  async applyVersion(
+    documentId: number,
+    versionId: number,
+    userEmail: string,
+  ): Promise<Document> {
+    const document = await this.documentRepository.findOne({
+      where: { id: documentId },
+    });
+    if (!document) {
+      throw new NotFoundException(`Document with id ${documentId} not found`);
+    }
+
+    const version = await this.versionService.findById(versionId);
+    if (!version || version.document.id !== documentId) {
+      throw new NotFoundException(
+        `Version with id ${versionId} not found for document ${documentId}`,
+      );
+    }
+
+    document.richContent = version.richContent;
+    const updatedDocument = await this.documentRepository.save(document);
+
+    await this.versionService.createVersion(
+      updatedDocument,
+      updatedDocument.richContent,
+      userEmail,
+    );
+    return updatedDocument;
   }
 }

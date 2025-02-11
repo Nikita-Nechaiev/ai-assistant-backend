@@ -10,6 +10,8 @@ import { UserCollaborationSessionModule } from 'src/user-collaboration-session/u
 import { CollaborationSessionGateway } from './collaboration-session.gateway';
 import { MessagesModule } from 'src/messages/messages.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { AiToolUsageModule } from 'src/ai-tool-usage/ai-tool-usage.module';
+import { VersionModule } from 'src/version/version.module';
 
 @Module({
   imports: [
@@ -19,11 +21,12 @@ import { AuthModule } from 'src/auth/auth.module';
     UserCollaborationSessionModule,
     InvitationModule,
     MessagesModule,
-    AuthModule
+    AuthModule,
+    VersionModule,
+    AiToolUsageModule,
   ],
   controllers: [CollaborationSessionController],
   providers: [CollaborationSessionService, CollaborationSessionGateway],
   exports: [CollaborationSessionService],
 })
-export class CollaborationSessionModule {
-}
+export class CollaborationSessionModule {}

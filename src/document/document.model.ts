@@ -18,17 +18,8 @@ export class Document {
   @Column()
   title: string;
 
-  @Column({ nullable: true })
-  content: string; // Текстовый контент
-
-  @Column('json', { nullable: true })
-  richContent: Record<string, any>;
-
-  @Column({ type: 'float', nullable: true })
-  readabilityScore: number;
-
-  @Column({ type: 'float', nullable: true })
-  toneAnalysis: number;
+  @Column()
+  richContent: string;
 
   @CreateDateColumn()
   lastUpdated: Date;
