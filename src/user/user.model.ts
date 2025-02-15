@@ -1,6 +1,5 @@
 import { AiToolUsage } from 'src/ai-tool-usage/ai-tool-usage.model';
 import { Invitation } from 'src/invitation/invitation.model';
-import { Settings } from 'src/settings/settings.model';
 import { UserCollaborationSession } from 'src/user-collaboration-session/user-collaboration-session.model';
 import {
   Entity,
@@ -8,8 +7,6 @@ import {
   Column,
   CreateDateColumn,
   OneToMany,
-  OneToOne,
-  JoinColumn,
 } from 'typeorm';
 
 export enum Role {
@@ -60,8 +57,4 @@ export class User {
 
   @OneToMany(() => Invitation, (invitation) => invitation.receiver)
   invitations: Invitation[];
-
-  @OneToOne(() => Settings, (settings) => settings.user, { cascade: true })
-  @JoinColumn()
-  settings: Settings;
 }

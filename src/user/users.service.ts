@@ -3,15 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Role, User } from './user.model';
 import * as bcrypt from 'bcrypt';
-import { SettingsService } from 'src/settings/settings.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    // private readonly analyticsSummaryService: AnalyticsSummaryService,
-    // private readonly settingsService: SettingsService,
   ) {}
 
   async findByEmail(email: string): Promise<User | null> {
@@ -62,20 +59,7 @@ export class UsersService {
       roles: userData.roles || [Role.USER],
       avatar: userData.avatar || null,
     });
-
-    const savedUser = await this.userRepository.save(user);
-
-    // const settings =
-    //   await this.settingsService.createDefaultSettings(savedUser);
-    // const analyticsSummary =
-    //   await this.analyticsSummaryService.createBaseAnalytics(savedUser);
-
-    // savedUser.settings = settings;
-    // savedUser.analyticsSummary = analyticsSummary;
-
-    const finalUser = await this.userRepository.save(savedUser);
-
-    return finalUser;
+    return this.userRepository.save(user);
   }
 
   async getAllUsers(): Promise<User[]> {
@@ -96,7 +80,6 @@ export class UsersService {
   async findByResetToken(token: string): Promise<User | null> {
     const users = await this.userRepository.find();
     for (const user of users) {
-      console.log(user);
       if (await bcrypt.compare(token, user.resetToken)) {
         return user;
       }
@@ -105,7 +88,6 @@ export class UsersService {
   }
 
   async updatePassword(userId: number, hashedPassword: string): Promise<void> {
-    console.log('hashedPassword', hashedPassword);
     await this.userRepository.update(userId, {
       passwordHash: hashedPassword,
       resetToken: '',

@@ -28,6 +28,9 @@ export class AiToolUsage {
   @ManyToOne(() => User, (user) => user.aiToolUsages, { onDelete: 'CASCADE' })
   user: User;
 
-  @ManyToOne(() => Document, { onDelete: 'CASCADE', nullable: true })
-  document: Document | null; // Allow null for optional association
+  @ManyToOne(() => Document, (document) => document.aiToolUsages, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  document: Document | null;
 }

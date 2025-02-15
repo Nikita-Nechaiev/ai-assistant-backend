@@ -30,25 +30,34 @@ export class AiToolUsageService {
   async getUsageByUser(
     userId: number,
     page: number = 1,
-    limit: number = 5,
+    limit: number = 8,
+    search?: string,
   ): Promise<AiToolUsage[]> {
     const skip = (page - 1) * limit;
-    return this.aiToolUsageRepository.find({
-      where: { user: { id: userId } },
-      order: { timestamp: 'DESC' },
-      skip,
-      take: limit,
-    });
+
+    let queryBuilder = this.aiToolUsageRepository
+      .createQueryBuilder('usage')
+      .where('usage.userId = :userId', { userId })
+      .orderBy('usage.timestamp', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    if (search) {
+      queryBuilder = queryBuilder.andWhere(
+        `(LOWER(usage.toolName) ILIKE :search OR LOWER(usage.sentText) ILIKE :search OR LOWER(usage.result) ILIKE :search)`,
+        { search: `%${search.toLowerCase()}%` },
+      );
+    }
+
+    return queryBuilder.getMany();
   }
 
-  // Helper: fetch all usage for statistics
   async getAllUsageByUser(userId: number): Promise<AiToolUsage[]> {
     return this.aiToolUsageRepository.find({
       where: { user: { id: userId } },
     });
   }
 
-  // Returns statistics about AI tool usage.
   async getMostFrequentAiTool(userId: number): Promise<{
     mostFrequentTool: string | null;
     totalUsageNumber: number;
@@ -209,16 +218,18 @@ export class AiToolUsageService {
             role: 'system',
             content:
               systemMessage.content +
-              ' Provide your response as a single continuous paragraph without any line breaks, special symbols, or markdown formatting.',
+              ' Provide your response as a single continuous paragraph without any line breaks, special symbols, or markdown formatting. Text can not be longer 2200 symbols.',
           },
-          { role: 'user', content: text },
+          {
+            role: 'user',
+            content: typeof text === 'string' ? text : JSON.stringify(text),
+          },
         ],
       });
 
       let result = response.choices[0]?.message?.content || '';
       result = this.cleanText(result);
 
-      // --- Create a new entity explicitly. ---
       const aiToolUsage = new AiToolUsage();
       aiToolUsage.user = { id: userId } as User;
       aiToolUsage.toolName = toolName;
@@ -229,7 +240,6 @@ export class AiToolUsageService {
         aiToolUsage.document = { id: documentId } as Document;
       }
 
-      // Now save the new instance (which is definitely an insert, not an update).
       return await this.aiToolUsageRepository.save(aiToolUsage);
     } catch (error) {
       console.error(`${toolName} error:`, error.message);
@@ -263,8 +273,8 @@ export class AiToolUsageService {
           readabilityScore: Math.min(
             Math.max(parsedResult.readabilityScore, 1),
             100,
-          ), // Ensure value is between 1 and 100
-          toneAnalysis: Math.min(Math.max(parsedResult.toneAnalysis, 1), 100), // Ensure value is between 1 and 100
+          ),
+          toneAnalysis: Math.min(Math.max(parsedResult.toneAnalysis, 1), 100),
         };
       } else {
         throw new Error('Invalid response format from AI.');

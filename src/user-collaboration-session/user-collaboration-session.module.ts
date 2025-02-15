@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserCollaborationSession } from './user-collaboration-session.model';
 import { UserCollaborationSessionService } from './user-collaboration-session.service';
-import { UserCollaborationSessionController } from './user-collaboration-session.controller';
 import { UsersModule } from 'src/user/users.module';
 
 @Module({
@@ -10,7 +9,6 @@ import { UsersModule } from 'src/user/users.module';
     UsersModule,
     TypeOrmModule.forFeature([UserCollaborationSession]),
   ],
-  controllers: [UserCollaborationSessionController],
   providers: [UserCollaborationSessionService],
   exports: [UserCollaborationSessionService],
 })

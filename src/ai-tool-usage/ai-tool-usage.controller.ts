@@ -20,16 +20,20 @@ export class AiToolUsageController {
   async getUsageByUser(
     @Req() req,
     @Query('page') page: string = '1',
-    @Query('limit') limit: string = '5',
+    @Query('limit') limit: string = '8',
+    @Query('search') search?: string,
   ) {
-    const userId = req.user.id; // Extract userId from JWT payload
-    // Convert page and limit to numbers
+    const userId = req.user.id;
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
-    return this.aiToolUsageService.getUsageByUser(userId, pageNum, limitNum);
+    return this.aiToolUsageService.getUsageByUser(
+      userId,
+      pageNum,
+      limitNum,
+      search,
+    );
   }
 
-  // Statistics endpoint
   @Get('user/most-used-tool')
   async getMostFrequentAiTool(@Req() req: any) {
     const userId = req.user.id; // Extract user ID from JWT payload

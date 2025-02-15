@@ -9,25 +9,27 @@ import { TokenModule } from 'src/token/token.module';
 import { EmailModule } from 'src/email/email.module';
 import { PassportModule } from '@nestjs/passport';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { FileModule } from 'src/file/file.module';
 
 @Module({
   imports: [
-    PassportModule.register({ defaultStrategy: 'google' }), 
+    PassportModule.register({ defaultStrategy: 'google' }),
     TokenModule,
     UsersModule,
     ConfigModule,
     EmailModule,
+    FileModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_ACCESS_SECRET'), // Set the secret here
-        signOptions: { expiresIn: '60m' }, // Optional: Access token expiration
+        secret: configService.get<string>('JWT_ACCESS_SECRET'),
+        signOptions: { expiresIn: '60m' },
       }),
     }),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, GoogleStrategy],
-  exports: [AuthService]
+  exports: [AuthService],
 })
 export class AuthModule {}

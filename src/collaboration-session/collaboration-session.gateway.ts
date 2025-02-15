@@ -91,7 +91,7 @@ export class CollaborationSessionGateway
         decoded = verify(accessToken, process.env.JWT_ACCESS_SECRET);
       } catch (error) {
         if (error.name === 'TokenExpiredError') {
-          const { accessToken: newAccessToken, newRefreshToken } =
+          const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
             await this.authService.refresh(refreshToken);
           accessToken = newAccessToken;
           refreshToken = newRefreshToken;
@@ -134,23 +134,31 @@ export class CollaborationSessionGateway
         if (userData.socketIds.size === 0) {
           const timeSpentSeconds = (Date.now() - userData.startTime) / 1000;
 
-          await this.userCollaborationSessionService.updateTimeSpent(
-            userId,
-            sessionId,
-            timeSpentSeconds,
-          );
+          const sessionExists =
+            await this.collaborationSessionService.findById(sessionId);
+          if (sessionExists) {
+            await this.userCollaborationSessionService.updateTimeSpent(
+              userId,
+              sessionId,
+              timeSpentSeconds,
+            );
 
-          await this.userCollaborationSessionService.updateLastInteracted(
-            userId,
-            sessionId,
-            new Date(),
-          );
+            await this.userCollaborationSessionService.updateLastInteracted(
+              userId,
+              sessionId,
+              new Date(),
+            );
 
-          this.logger.log(
-            `User ${userId} spent ${timeSpentSeconds}s in the session (${sessionId}).`,
-          );
+            this.logger.log(
+              `User ${userId} spent ${timeSpentSeconds}s in the session (${sessionId}).`,
+            );
 
-          this.server.to(`session_${sessionId}`).emit('userLeft', { userId });
+            this.server.to(`session_${sessionId}`).emit('userLeft', { userId });
+          } else {
+            this.logger.warn(
+              `Session ${sessionId} has already been deleted. Skipping updates.`,
+            );
+          }
 
           this.onlineUsers.delete(userId);
         }
@@ -317,6 +325,13 @@ export class CollaborationSessionGateway
         sessionId,
       );
 
+    if (!userSession) {
+      client.emit('invalidSession', {
+        message: 'You do not have permission to access this page',
+      });
+      return;
+    }
+
     const timeSpent = Number(userSession.timeSpent);
     let existingData = this.onlineUsers.get(userId);
 
@@ -328,7 +343,6 @@ export class CollaborationSessionGateway
       });
       client.emit('currentTime', { totalTime: timeSpent });
     } else {
-      // Пользователь уже был онлайн
       const partialSeconds = (Date.now() - existingData.startTime) / 1000;
       const currentTime = timeSpent + partialSeconds;
       existingData.socketIds.add(client.id);
@@ -347,7 +361,6 @@ export class CollaborationSessionGateway
       },
     );
 
-    // 5) Приводим каждую связь к формату ICollaborator
     const onlineCollaborators = onlineUserSessions.map((ucs) => ({
       id: ucs.user.id,
       name: ucs.user.name,
@@ -374,8 +387,32 @@ export class CollaborationSessionGateway
     client.to(`session_${sessionId}`).emit('userLeft', { userId });
   }
 
+  @SubscribeMessage('deleteSession')
+  @Roles(Permission.EDIT)
+  async handleDeleteSession(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { sessionId: number },
+  ) {
+    try {
+      const { sessionId } = data;
+
+      await this.collaborationSessionService.deleteSession(sessionId);
+
+      this.server.to(`session_${sessionId}`).emit('sessionDeleted', {
+        sessionId,
+        message: 'This session has been deleted by the admin',
+      });
+
+      this.server.socketsLeave(`session_${sessionId}`);
+    } catch (error) {
+      this.logger.error(`Failed to delete session: ${error.message}`);
+      client.emit('error', 'Failed to delete session');
+    }
+  }
+
   /* =============================== DOCUMENT LOGIC ============================================================================================== */
   @SubscribeMessage('changeDocumentTitle')
+  @Roles(Permission.EDIT)
   async handleChangeDocumentTitle(
     @MessageBody() data: { documentId: number; newTitle: string },
     @ConnectedSocket() client: Socket,
@@ -397,6 +434,7 @@ export class CollaborationSessionGateway
   }
 
   @SubscribeMessage('createDocument')
+  @Roles(Permission.EDIT)
   async handleCreateDocument(
     @MessageBody() data: { title: string },
     @ConnectedSocket() client: Socket,
@@ -409,16 +447,19 @@ export class CollaborationSessionGateway
     }
 
     const user = await this.userService.findById(client.data.userId);
-    const newDocument = await this.documentService.createDocument(
-      sessionId,
-      user.email,
-      data.title,
-    );
+    const { document: newDocument, version } =
+      await this.documentService.createDocument(
+        sessionId,
+        user.email,
+        data.title,
+      );
 
     this.server.to(`session_${sessionId}`).emit('documentCreated', newDocument);
+    this.server.to(`session_${sessionId}`).emit('versionCreated', version);
   }
 
   @SubscribeMessage('deleteDocument')
+  @Roles(Permission.EDIT)
   async handleDeleteDocument(
     @MessageBody() data: { documentId: number },
     @ConnectedSocket() client: Socket,
@@ -437,6 +478,7 @@ export class CollaborationSessionGateway
   }
 
   @SubscribeMessage('duplicateDocument')
+  @Roles(Permission.EDIT)
   async handleDuplicateDocument(
     @MessageBody() data: { documentId: number },
     @ConnectedSocket() client: Socket,
@@ -448,16 +490,13 @@ export class CollaborationSessionGateway
     }
 
     const user = await this.userService.findById(client.data.userId);
-    const duplicate = await this.documentService.duplicateDocument(
-      data.documentId,
-      user.email,
-    );
-
-    console.log('duplicate', duplicate);
+    const { document: duplicate, version } =
+      await this.documentService.duplicateDocument(data.documentId, user.email);
 
     this.server
       .to(`session_${sessionId}`)
       .emit('documentDuplicated', duplicate);
+    this.server.to(`session_${sessionId}`).emit('versionCreated', version);
   }
 
   @SubscribeMessage('getSessionDocuments')
@@ -469,11 +508,11 @@ export class CollaborationSessionGateway
     }
 
     const documents = await this.documentService.getSessionDocuments(sessionId);
-
     client.emit('sessionDocuments', documents);
   }
 
   @SubscribeMessage('changeContentAndSaveDocument')
+  @Roles(Permission.EDIT)
   async handleChangeContentAndSaveDocument(
     @MessageBody() data: { documentId: number; newContent: any },
     @ConnectedSocket() client: Socket,
@@ -485,7 +524,7 @@ export class CollaborationSessionGateway
     }
 
     const user = await this.userService.findById(client.data.userId);
-    const updatedDocument =
+    const { document: updatedDocument, version } =
       await this.documentService.changeContentAndSaveDocument(
         data.documentId,
         data.newContent,
@@ -495,9 +534,11 @@ export class CollaborationSessionGateway
     this.server
       .to(`session_${sessionId}`)
       .emit('documentUpdated', updatedDocument);
+    this.server.to(`session_${sessionId}`).emit('versionCreated', version);
   }
 
   @SubscribeMessage('applyVersion')
+  @Roles(Permission.EDIT)
   async handleApplyVersion(
     @MessageBody() data: { documentId: number; versionId: number },
     @ConnectedSocket() client: Socket,
@@ -509,15 +550,17 @@ export class CollaborationSessionGateway
     }
 
     const user = await this.userService.findById(client.data.userId);
-    const updatedDocument = await this.documentService.applyVersion(
-      data.documentId,
-      data.versionId,
-      user.email,
-    );
+    const { document: updatedDocument, version } =
+      await this.documentService.applyVersion(
+        data.documentId,
+        data.versionId,
+        user.email,
+      );
 
     this.server
       .to(`session_${sessionId}`)
       .emit('documentUpdated', updatedDocument);
+    this.server.to(`session_${sessionId}`).emit('versionCreated', version);
   }
 
   @SubscribeMessage('getDocument')
@@ -531,11 +574,40 @@ export class CollaborationSessionGateway
       return;
     }
 
-    const document = await this.documentService.findById(data.documentId);
-    client.emit('documentData', document);
+    try {
+      const updatedDocument = await this.documentService.updateLastUpdated(
+        data.documentId,
+      );
+
+      if (updatedDocument.collaborationSession.id !== sessionId) {
+        client.emit('invalidDocument', {
+          message: 'Document does not belong to this session',
+          documentId: data.documentId,
+        });
+        return;
+      }
+
+      if (!updatedDocument) {
+        client.emit('invalidDocument', {
+          message: 'Document not found',
+          documentId: data.documentId,
+        });
+        return;
+      }
+
+      client.emit('documentData', updatedDocument);
+      client.emit('lastEditedDocument', updatedDocument);
+    } catch (error) {
+      console.error('Error updating document:', error);
+      client.emit('invalidDocument', {
+        message: 'Invalid document page',
+        documentId: data.documentId,
+      });
+    }
   }
 
   @SubscribeMessage('getDocumentAiUsage')
+  @Roles(Permission.EDIT)
   async handleGetDocumentAiUsage(
     @MessageBody() data: { documentId: number },
     @ConnectedSocket() client: Socket,
@@ -649,6 +721,7 @@ export class CollaborationSessionGateway
   }
 
   @SubscribeMessage('getVersions')
+  @Roles(Permission.EDIT)
   async handleGetVersions(
     @MessageBody() data: { documentId: number },
     @ConnectedSocket() client: Socket,
@@ -841,7 +914,7 @@ export class CollaborationSessionGateway
     const sender = { id: userId } as User;
     const message = await this.messagesService.createMessage(
       sender,
-      collaborationSession,
+      collaborationSession.id,
       messageText,
     );
 
@@ -906,10 +979,15 @@ export class CollaborationSessionGateway
   @Roles(Permission.ADMIN)
   async handleUpdateSessionName(
     @MessageBody()
-    { sessionId, newName }: { sessionId: number; newName: string },
+    { newName }: { newName: string },
     @ConnectedSocket() client: Socket,
   ) {
     const userId = client.data.userId;
+    const sessionId = this.socketSessionMap.get(client.id);
+    if (!sessionId) {
+      client.emit('error', 'Session not found');
+      return;
+    }
 
     if (!userId) {
       client.emit('error', 'User not authenticated');

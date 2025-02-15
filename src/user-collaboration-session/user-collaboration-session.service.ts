@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -20,15 +24,13 @@ export class UserCollaborationSessionService {
     skip: number = 0,
     take: number = 25,
   ): Promise<UserCollaborationSession[]> {
-    const userCollabSessions = await this.userCollabSessionRepository.find({
+    return this.userCollabSessionRepository.find({
       where: { user: { id: userId } },
       relations: ['session'],
       skip,
       take,
       order: { id: 'ASC' },
     });
-
-    return userCollabSessions;
   }
 
   async createSession(
@@ -38,12 +40,8 @@ export class UserCollaborationSessionService {
   ): Promise<UserCollaborationSession> {
     const user = await this.userService.findById(userId);
 
-    if (!user) {
-      throw new Error('User not found');
-    }
-
     if (!sessionId) {
-      throw new Error('Collaboration Session not found');
+      throw new BadRequestException('Collaboration Session not found');
     }
 
     const userCollabSession = this.userCollabSessionRepository.create({
@@ -55,22 +53,31 @@ export class UserCollaborationSessionService {
     return this.userCollabSessionRepository.save(userCollabSession);
   }
 
+  private async getUserCollabSessionOrThrow(
+    userId: number,
+    sessionId: number,
+  ): Promise<UserCollaborationSession> {
+    const session = await this.userCollabSessionRepository.findOne({
+      where: { user: { id: userId }, session: { id: sessionId } },
+    });
+    if (!session) {
+      throw new NotFoundException('User Collaboration Session not found');
+    }
+    return session;
+  }
+
   async updateTimeSpent(
     userId: number,
     sessionId: number,
     timeSpent: number,
   ): Promise<UserCollaborationSession> {
-    const session = await this.findByUserAndSession(userId, sessionId);
+    const session = await this.getUserCollabSessionOrThrow(userId, sessionId);
 
-    if (!session) {
-      throw new Error('User Collaboration Session not found');
-    }
+    // Ensure we handle potential null values in timeSpent
+    const currentTimeSpent = session.timeSpent ? Number(session.timeSpent) : 0;
+    session.timeSpent = Math.round(currentTimeSpent + timeSpent);
 
-    session.timeSpent = Math.round(Number(session.timeSpent) + timeSpent);
-
-    await this.userCollabSessionRepository.save(session);
-
-    return session;
+    return this.userCollabSessionRepository.save(session);
   }
 
   async updateLastInteracted(
@@ -78,14 +85,9 @@ export class UserCollaborationSessionService {
     sessionId: number,
     date: Date,
   ): Promise<UserCollaborationSession> {
-    const session = await this.findByUserAndSession(userId, sessionId);
-
-    if (!session) {
-      throw new Error('User Collaboration Session not found');
-    }
+    const session = await this.getUserCollabSessionOrThrow(userId, sessionId);
 
     session.lastInteracted = date;
-
     return this.userCollabSessionRepository.save(session);
   }
 
@@ -96,9 +98,8 @@ export class UserCollaborationSessionService {
     const session = await this.userCollabSessionRepository.findOne({
       where: { id: sessionId },
     });
-
     if (!session) {
-      throw new Error('User Collaboration Session not found');
+      throw new NotFoundException('User Collaboration Session not found');
     }
 
     session.permissions = permissions;
@@ -111,7 +112,7 @@ export class UserCollaborationSessionService {
     });
 
     if (!session) {
-      throw new Error('User Collaboration Session not found');
+      throw new NotFoundException('User Collaboration Session not found');
     }
 
     await this.userCollabSessionRepository.remove(session);

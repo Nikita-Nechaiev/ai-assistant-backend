@@ -8,11 +8,11 @@ export class EmailService {
   constructor() {
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: +process.env.SMTP_PORT || 465, // Ensure port matches the secure setting
-      secure: true, // Use true for SSL (465), false for STARTTLS (587)
+      port: +process.env.SMTP_PORT || 465,
+      secure: true,
       auth: {
-        user: process.env.SMTP_USER, // Gmail address
-        pass: process.env.SMTP_PASSWORD, // App password
+        user: process.env.SMTP_USER, 
+        pass: process.env.SMTP_PASSWORD,
       },
     });
   }
@@ -33,5 +33,15 @@ export class EmailService {
       console.error(`Failed to send email: ${error.message}`);
       throw new Error('Email delivery failed');
     }
+  }
+
+  async sendResetPasswordEmail(email: string, resetLink: string) {
+    const html = `<p>Reset your password here: <a href="${resetLink}">Reset Password</a></p>`;
+    await this.sendMail(
+      email,
+      'Reset Your Password',
+      `Use this link: ${resetLink}`,
+      html,
+    );
   }
 }

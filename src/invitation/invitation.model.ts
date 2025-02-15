@@ -30,7 +30,7 @@ export class Invitation {
   @ManyToOne(() => CollaborationSession, (session) => session.invitations, {
     onDelete: 'CASCADE',
   })
-  session: CollaborationSession; // Ссылка на сессию
+  session: CollaborationSession;
 
   @Column({
     type: 'enum',
@@ -50,7 +50,7 @@ export class Invitation {
   date: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  expiresAt: Date | null; // Срок действия приглашения (например, 7 дней)
+  expiresAt: Date | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   inviterEmail: string;

@@ -123,7 +123,7 @@ export class AuthController {
       throw new UnauthorizedException('No refresh token found');
     }
 
-    const { newRefreshToken, accessToken } =
+    const { refreshToken: newRefreshToken, accessToken } =
       await this.authService.refresh(refreshToken);
 
     if (newRefreshToken) {
@@ -159,8 +159,11 @@ export class AuthController {
       throw new UnauthorizedException('No refresh token found');
     }
 
-    const { newRefreshToken, accessToken, user } =
-      await this.authService.refresh(refreshToken);
+    const {
+      refreshToken: newRefreshToken,
+      accessToken,
+      user,
+    } = await this.authService.refresh(refreshToken);
 
     return { accessToken, newRefreshToken, user };
   }

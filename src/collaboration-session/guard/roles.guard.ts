@@ -21,7 +21,7 @@ export class RolesGuard implements CanActivate {
       context.getHandler(),
     );
     if (!requiredPermissions) {
-      return true; // Если у метода нет ограничений, он доступен всем
+      return true;
     }
 
     const client = context.switchToWs().getClient();

@@ -25,6 +25,7 @@ export class CollaborationSessionController {
   async getUserSessions(
     @Req() req: Request,
     @Query('page') page: string = '1',
+    @Query('search') search?: string
   ) {
     const userId = req.user?.id;
     if (!userId) {
@@ -39,22 +40,17 @@ export class CollaborationSessionController {
     const take = 25;
     const skip = (parsedPage - 1) * take;
 
-    return this.collaborationSessionService.getUserSessions(userId, skip, take);
+    return this.collaborationSessionService.getUserSessions(
+      userId,
+      skip,
+      take,
+      search,
+    );
   }
 
   @Post('create')
   async createSession(@Req() req: Request, @Body('name') name: string) {
     const userId = req.user.id;
     return this.collaborationSessionService.createSession(userId, name);
-  }
-
-  @Get(':id')
-  async getSession(@Param('id') id: number) {
-    return this.collaborationSessionService.getSession(id);
-  }
-
-  @Put(':id')
-  async updateSessionName(@Param('id') id: number, @Body('name') name: string) {
-    return this.collaborationSessionService.updateSessionName(id, name);
   }
 }

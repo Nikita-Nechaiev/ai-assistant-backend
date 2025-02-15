@@ -23,17 +23,11 @@ export class InvitationService {
     private readonly userCollaborationSessionService: UserCollaborationSessionService,
   ) {}
 
-  /**
-   * Create a new invitation
-   */
   async create(createInvitationDto: CreateInvitationDto): Promise<Invitation> {
     const invitation = this.invitationRepository.create(createInvitationDto);
     return await this.invitationRepository.save(invitation);
   }
 
-  /**
-   * Update an invitation
-   */
   async update(
     id: number,
     updateInvitationDto: UpdateInvitationDto,
@@ -49,16 +43,12 @@ export class InvitationService {
     Object.assign(invitation, updateInvitationDto);
     await this.invitationRepository.save(invitation);
 
-    // Fetch the updated entity with relations
     return await this.invitationRepository.findOne({
       where: { id },
       relations: ['session'],
     });
   }
 
-  /**
-   * Delete an invitation
-   */
   async delete(id: number): Promise<void> {
     const result = await this.invitationRepository.delete(id);
 
@@ -67,18 +57,6 @@ export class InvitationService {
     }
   }
 
-  /**
-   * Find all invitations
-   */
-  async findAll(): Promise<Invitation[]> {
-    return await this.invitationRepository.find({
-      relations: ['receiver', 'session'], // Include related entities
-    });
-  }
-
-  /**
-   * Find an invitation by ID
-   */
   async findById(id: number): Promise<Invitation> {
     const invitation = await this.invitationRepository.findOne({
       where: { id },
@@ -92,14 +70,11 @@ export class InvitationService {
     return invitation;
   }
 
-  /**
-   * Find all invitations for a specific user
-   */
   async findByReceiverId(receiverId: number): Promise<Invitation[]> {
     return await this.invitationRepository.find({
       where: { receiver: { id: receiverId } },
-      relations: ['session', 'receiver'], // Include related entities
-      order: { date: 'DESC' }, // Sort by latest first
+      relations: ['session', 'receiver'],
+      order: { date: 'DESC' },
     });
   }
 
@@ -112,32 +87,28 @@ export class InvitationService {
       );
     }
 
-    // Update invitation status
     invitation.invitationStatus = InvitationStatus.ACCEPTED;
     invitation.notificationStatus = NotificationStatus.READ;
 
-    // Determine permissions based on the role in the invitation
     const permissions =
       invitation.role === Permission.EDIT
         ? [Permission.READ, Permission.EDIT]
         : [Permission.READ];
 
-    // Use the UserCollaborationSessionService to create a session
     await this.userCollaborationSessionService.createSession(
       invitation.receiver.id,
       invitation.session.id,
       permissions,
     );
 
-    // Save the updated invitation
     return await this.invitationRepository.save(invitation);
   }
 
   async getInvitationsForSession(sessionId: number): Promise<Invitation[]> {
     return await this.invitationRepository.find({
       where: { session: { id: sessionId } },
-      relations: ['receiver'], // Include related entities
-      order: { date: 'DESC' }, // Optional: Sort by creation date
+      relations: ['receiver'],
+      order: { date: 'DESC' },
     });
   }
 
@@ -154,14 +125,12 @@ export class InvitationService {
     invitationId: number,
     newRole: Permission,
   ): Promise<Invitation> {
-    // Ensure the new role is either READ or EDIT
     if (![Permission.READ, Permission.EDIT].includes(newRole)) {
       throw new ForbiddenException(
         `Role can only be changed to ${Permission.READ} or ${Permission.EDIT}`,
       );
     }
 
-    // Find the invitation
     const invitation = await this.findById(invitationId);
 
     if (!invitation) {
@@ -170,10 +139,8 @@ export class InvitationService {
       );
     }
 
-    // Update the role
     invitation.role = newRole;
 
-    // Save the updated invitation
     return await this.invitationRepository.save(invitation);
   }
 }

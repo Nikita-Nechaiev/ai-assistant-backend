@@ -2,7 +2,6 @@ import { Type } from 'class-transformer';
 import {
   IsEnum,
   IsOptional,
-  IsString,
   IsEmail,
   IsDate,
   ValidateNested,

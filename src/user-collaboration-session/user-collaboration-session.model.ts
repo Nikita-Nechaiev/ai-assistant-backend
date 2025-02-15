@@ -34,7 +34,7 @@ export class UserCollaborationSession {
   permissions: Permission[];
 
   @Column({ type: 'bigint', default: 0 })
-  timeSpent: number; // seconds
+  timeSpent: number;
 
   @CreateDateColumn()
   createdAt: Date;

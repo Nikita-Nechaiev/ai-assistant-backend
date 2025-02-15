@@ -12,24 +12,10 @@ export class MessagesService {
     private readonly messageRepository: Repository<Message>,
   ) {}
 
-  async createMessage(
-    sender: User,
-    collaborationSession: CollaborationSession,
-    text: string,
-  ): Promise<Message> {
-    // Create and save the message
-    const message = this.messageRepository.create({
-      sender,
-      collaborationSession: { id: collaborationSession.id },
-      text,
-    });
-
-    await this.messageRepository.save(message);
-
-    // Use QueryBuilder to control the fetched fields explicitly
+  private async getMessageWithSender(messageId: number): Promise<Message> {
     return this.messageRepository
       .createQueryBuilder('message')
-      .leftJoinAndSelect('message.sender', 'sender') // Join sender relation
+      .leftJoinAndSelect('message.sender', 'sender')
       .select([
         'message.id',
         'message.text',
@@ -37,10 +23,25 @@ export class MessagesService {
         'sender.id',
         'sender.name',
         'sender.email',
-        'sender.avatar', // Include only the required sender fields
+        'sender.avatar',
       ])
-      .where('message.id = :id', { id: message.id })
+      .where('message.id = :id', { id: messageId })
       .getOne();
+  }
+
+  async createMessage(
+    sender: User,
+    collaborationSessionId: number,
+    text: string,
+  ): Promise<Message> {
+    const message = this.messageRepository.create({
+      sender,
+      collaborationSession: { id: collaborationSessionId },
+      text,
+    });
+
+    const savedMessage = await this.messageRepository.save(message);
+    return this.getMessageWithSender(savedMessage.id);
   }
 
   async getMessagesForSession(

@@ -15,7 +15,12 @@ export class CollaborationSessionService {
     private readonly userCollaborationSessionService: UserCollaborationSessionService,
   ) {}
 
-  async getUserSessions(userId: number, skip: number, take: number) {
+  async getUserSessions(
+    userId: number,
+    skip: number,
+    take: number,
+    search?: string,
+  ) {
     const userCollabSessions =
       await this.userCollaborationSessionService.getUserCollaborationSessions(
         userId,
@@ -29,34 +34,25 @@ export class CollaborationSessionService {
       return [];
     }
 
-    const sessions = await this.collaborationSessionRepository.find({
-      where: { id: In(sessionIds) },
-      relations: {
-        userCollaborationSessions: {
-          user: true,
+    let queryBuilder = this.collaborationSessionRepository
+      .createQueryBuilder('session')
+      .where('session.id IN (:...sessionIds)', { sessionIds })
+      .leftJoinAndSelect('session.userCollaborationSessions', 'ucs')
+      .leftJoinAndSelect('ucs.user', 'user')
+      .orderBy('ucs.lastInteracted', 'DESC')
+      .skip(skip)
+      .take(take);
+
+    if (search) {
+      queryBuilder = queryBuilder.andWhere(
+        'LOWER(session.name) ILIKE :search',
+        {
+          search: `%${search.toLowerCase()}%`,
         },
-      },
-      select: {
-        id: true,
-        name: true,
-        createdAt: true,
-        userCollaborationSessions: {
-          id: true,
-          lastInteracted: true,
-          user: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-          },
-        },
-      },
-      order: {
-        userCollaborationSessions: {
-          lastInteracted: 'DESC', // Database-level sorting
-        },
-      },
-    });
+      );
+    }
+
+    const sessions = await queryBuilder.getMany();
 
     return sessions.map((session) => ({
       id: session.id,
@@ -152,20 +148,29 @@ export class CollaborationSessionService {
     return this.collaborationSessionRepository.save(session);
   }
 
-  async findById(id: number): Promise<CollaborationSession> {
+  async findById(id: number): Promise<CollaborationSession | null> {
+    try {
+      const session = await this.collaborationSessionRepository.findOne({
+        where: { id },
+        relations: ['documents', 'userCollaborationSessions', 'invitations'],
+      });
+
+      return session || null; // ✅ Return null instead of throwing an error
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async deleteSession(sessionId: number): Promise<void> {
     const session = await this.collaborationSessionRepository.findOne({
-      where: { id },
-      relations: [
-        'documents',
-        'userCollaborationSessions',
-        'invitations',
-      ],
+      where: { id: sessionId },
+      relations: ['userCollaborationSessions'],
     });
 
     if (!session) {
-      throw new Error(`Collaboration session with ID ${id} not found`);
+      throw new Error(`Session with ID ${sessionId} not found`);
     }
 
-    return session;
+    await this.collaborationSessionRepository.delete(sessionId);
   }
 }

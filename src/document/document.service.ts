@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Document } from './document.model';
 import { VersionService } from 'src/version/version.service';
+import { Version } from 'src/version/version.model'; // Adjust the import as needed
 
 @Injectable()
 export class DocumentService {
@@ -43,7 +44,7 @@ export class DocumentService {
     sessionId: number,
     userEmail: string,
     title: string,
-  ): Promise<Document> {
+  ): Promise<{ document: Document; version: Version }> {
     const newDocument = this.documentRepository.create({
       title,
       richContent: '',
@@ -52,29 +53,19 @@ export class DocumentService {
 
     const savedDocument = await this.documentRepository.save(newDocument);
 
-    await this.versionService.createVersion(
+    // Create a version for the new document.
+    const version = await this.versionService.createVersion(
       savedDocument,
       savedDocument.richContent,
       userEmail,
     );
-    return savedDocument;
-  }
-
-  async deleteDocument(documentId: number): Promise<void> {
-    const document = await this.documentRepository.findOne({
-      where: { id: documentId },
-    });
-    if (!document) {
-      throw new NotFoundException(`Document with id ${documentId} not found`);
-    }
-
-    await this.documentRepository.remove(document);
+    return { document: savedDocument, version };
   }
 
   async duplicateDocument(
     documentId: number,
     userEmail: string,
-  ): Promise<Document> {
+  ): Promise<{ document: Document; version: Version }> {
     const originalDocument = await this.documentRepository.findOne({
       where: { id: documentId },
       relations: ['collaborationSession'],
@@ -91,12 +82,40 @@ export class DocumentService {
 
     const savedDuplicate = await this.documentRepository.save(duplicate);
 
-    await this.versionService.createVersion(
+    // Create a version for the duplicated document.
+    const version = await this.versionService.createVersion(
       savedDuplicate,
       savedDuplicate.richContent,
       userEmail,
     );
-    return savedDuplicate;
+    return { document: savedDuplicate, version };
+  }
+
+  async changeContentAndSaveDocument(
+    documentId: number,
+    newContent: any,
+    userEmail: string,
+  ): Promise<{ document: Document; version: Version }> {
+    const document = await this.documentRepository.findOne({
+      where: { id: documentId },
+    });
+
+    if (!document) {
+      throw new NotFoundException(`Document with id ${documentId} not found`);
+    }
+
+    document.richContent = newContent;
+    document.lastUpdated = new Date();
+
+    const updatedDocument = await this.documentRepository.save(document);
+
+    const version = await this.versionService.createVersion(
+      updatedDocument,
+      newContent,
+      userEmail,
+    );
+
+    return { document: updatedDocument, version };
   }
 
   async getSessionDocuments(sessionId: number): Promise<Document[]> {
@@ -110,34 +129,11 @@ export class DocumentService {
     });
   }
 
-  async changeContentAndSaveDocument(
-    documentId: number,
-    newContent: any,
-    userEmail: string,
-  ): Promise<Document> {
-    const document = await this.documentRepository.findOne({
-      where: { id: documentId },
-    });
-    if (!document) {
-      throw new NotFoundException(`Document with id ${documentId} not found`);
-    }
-
-    document.richContent = newContent;
-    const updatedDocument = await this.documentRepository.save(document);
-
-    await this.versionService.createVersion(
-      updatedDocument,
-      newContent,
-      userEmail,
-    );
-    return updatedDocument;
-  }
-
   async applyVersion(
     documentId: number,
     versionId: number,
     userEmail: string,
-  ): Promise<Document> {
+  ): Promise<{ document: Document; version: Version }> {
     const document = await this.documentRepository.findOne({
       where: { id: documentId },
     });
@@ -145,21 +141,50 @@ export class DocumentService {
       throw new NotFoundException(`Document with id ${documentId} not found`);
     }
 
-    const version = await this.versionService.findById(versionId);
-    if (!version || version.document.id !== documentId) {
+    const versionRecord = await this.versionService.findById(versionId);
+    if (!versionRecord || versionRecord.document.id !== documentId) {
       throw new NotFoundException(
         `Version with id ${versionId} not found for document ${documentId}`,
       );
     }
 
-    document.richContent = version.richContent;
+    // Apply the selected version’s content.
+    document.richContent = versionRecord.richContent;
     const updatedDocument = await this.documentRepository.save(document);
 
-    await this.versionService.createVersion(
+    // Create a new version for applying this version.
+    const newVersion = await this.versionService.createVersion(
       updatedDocument,
       updatedDocument.richContent,
       userEmail,
     );
+    return { document: updatedDocument, version: newVersion };
+  }
+
+  async deleteDocument(documentId: number): Promise<void> {
+    const document = await this.documentRepository.findOne({
+      where: { id: documentId },
+    });
+    if (!document) {
+      throw new NotFoundException(`Document with id ${documentId} not found`);
+    }
+
+    await this.documentRepository.remove(document);
+  }
+
+  async updateLastUpdated(documentId: number): Promise<Document> {
+    const document = await this.documentRepository.findOne({
+      where: { id: documentId },
+      relations: ['collaborationSession']
+    });
+
+    if (!document) {
+      throw new NotFoundException(`Document with id ${documentId} not found`);
+    }
+
+    document.lastUpdated = new Date();
+    const updatedDocument = await this.documentRepository.save(document);
+
     return updatedDocument;
   }
 }

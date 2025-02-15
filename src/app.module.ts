@@ -8,10 +8,10 @@ import { AiToolUsageModule } from './ai-tool-usage/ai-tool-usage.module';
 import { CollaborationSessionModule } from './collaboration-session/collaboration-session.module';
 import { EmailModule } from './email/email.module';
 import { UserCollaborationSessionModule } from './user-collaboration-session/user-collaboration-session.module';
-import { SettingsModule } from './settings/settings.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { MessagesModule } from './messages/messages.module';
 import { TokenModule } from './token/token.module';
+import { FileModule } from './file/file.module';
 
 @Module({
   controllers: [],
@@ -38,10 +38,10 @@ import { TokenModule } from './token/token.module';
     CollaborationSessionModule,
     EmailModule,
     UserCollaborationSessionModule,
-    SettingsModule,
     InvitationModule,
     MessagesModule,
     TokenModule,
+    FileModule,
   ],
 })
 export class AppModule {}
