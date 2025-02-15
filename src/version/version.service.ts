@@ -34,7 +34,7 @@ export class VersionService {
   async findById(versionId: number): Promise<Version> {
     const version = await this.versionRepository.findOne({
       where: { id: versionId },
-      relations: ['document'], // Ensure the associated document is loaded.
+      relations: ['document'],
     });
     if (!version) {
       throw new NotFoundException(`Version with id ${versionId} not found`);

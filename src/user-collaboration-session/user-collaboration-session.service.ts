@@ -73,7 +73,6 @@ export class UserCollaborationSessionService {
   ): Promise<UserCollaborationSession> {
     const session = await this.getUserCollabSessionOrThrow(userId, sessionId);
 
-    // Ensure we handle potential null values in timeSpent
     const currentTimeSpent = session.timeSpent ? Number(session.timeSpent) : 0;
     session.timeSpent = Math.round(currentTimeSpent + timeSpent);
 

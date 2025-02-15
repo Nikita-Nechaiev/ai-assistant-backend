@@ -91,7 +91,7 @@ export class CollaborationSessionService {
     await this.userCollaborationSessionService.createSession(
       userId,
       savedSession.id,
-      [Permission.EDIT, Permission.READ, Permission.ADMIN], // Default permissions
+      [Permission.EDIT, Permission.READ, Permission.ADMIN],
     );
 
     return savedSession;
@@ -155,7 +155,7 @@ export class CollaborationSessionService {
         relations: ['documents', 'userCollaborationSessions', 'invitations'],
       });
 
-      return session || null; // ✅ Return null instead of throwing an error
+      return session || null;
     } catch (error) {
       return null;
     }

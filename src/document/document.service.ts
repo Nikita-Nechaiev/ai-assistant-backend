@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Document } from './document.model';
 import { VersionService } from 'src/version/version.service';
-import { Version } from 'src/version/version.model'; // Adjust the import as needed
+import { Version } from 'src/version/version.model'; 
 
 @Injectable()
 export class DocumentService {
@@ -53,7 +53,6 @@ export class DocumentService {
 
     const savedDocument = await this.documentRepository.save(newDocument);
 
-    // Create a version for the new document.
     const version = await this.versionService.createVersion(
       savedDocument,
       savedDocument.richContent,
@@ -82,7 +81,6 @@ export class DocumentService {
 
     const savedDuplicate = await this.documentRepository.save(duplicate);
 
-    // Create a version for the duplicated document.
     const version = await this.versionService.createVersion(
       savedDuplicate,
       savedDuplicate.richContent,
@@ -148,11 +146,9 @@ export class DocumentService {
       );
     }
 
-    // Apply the selected version’s content.
     document.richContent = versionRecord.richContent;
     const updatedDocument = await this.documentRepository.save(document);
 
-    // Create a new version for applying this version.
     const newVersion = await this.versionService.createVersion(
       updatedDocument,
       updatedDocument.richContent,

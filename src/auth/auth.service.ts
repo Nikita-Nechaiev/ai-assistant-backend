@@ -131,7 +131,7 @@ export class AuthService {
   async sendResetPasswordLink(email: string): Promise<void> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      return; // Security: Avoid revealing if the email exists
+      return;
     }
 
     const resetToken = crypto.randomBytes(32).toString('hex');
