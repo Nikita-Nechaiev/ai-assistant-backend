@@ -23,11 +23,18 @@ import { FileModule } from './file/file.module';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.POSTGRES_HOST,
-      port: Number(process.env.POSTGRES_PORT),
-      username: process.env.POSTGRES_USER,
-      password: process.env.POSTGRES_PASSWORD,
-      database: process.env.POSTGRES_DB,
+      url: process.env.DATABASE_URL || undefined, // Используем DATABASE_URL, если она задана
+      host: process.env.DATABASE_URL ? undefined : process.env.POSTGRES_HOST,
+      port: process.env.DATABASE_URL
+        ? undefined
+        : Number(process.env.POSTGRES_PORT),
+      username: process.env.DATABASE_URL
+        ? undefined
+        : process.env.POSTGRES_USER,
+      password: process.env.DATABASE_URL
+        ? undefined
+        : process.env.POSTGRES_PASSWORD,
+      database: process.env.DATABASE_URL ? undefined : process.env.POSTGRES_DB,
       autoLoadEntities: true,
       synchronize: true,
     }),
