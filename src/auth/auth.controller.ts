@@ -37,7 +37,7 @@
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: 'none',
+        sameSite: 'strict',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       });
 
@@ -45,7 +45,7 @@
         res.cookie('accessToken', accessToken, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'strict',
           maxAge: 15 * 60 * 1000,
         });
       }
@@ -69,7 +69,7 @@
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: 'none',
+        sameSite: 'strict',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
@@ -77,7 +77,7 @@
         res.cookie('accessToken', accessToken, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'strict',
           maxAge: 15 * 60 * 1000,
         });
       }
@@ -99,13 +99,13 @@
       res.clearCookie('refreshToken', {
         httpOnly: true,
         secure: true,
-        sameSite: 'none',
+        sameSite: 'strict',
       });
 
       res.clearCookie('accessToken', {
         httpOnly: true,
         secure: true,
-        sameSite: 'none',
+        sameSite: 'strict',
       });
 
       return { message: 'Logged out successfully' };
@@ -130,7 +130,7 @@
         res.cookie('refreshToken', newRefreshToken, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'strict',
           maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         });
       }
@@ -139,7 +139,7 @@
         res.cookie('accessToken', accessToken, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'strict',
           maxAge: 15 * 60 * 1000,
         });
       }
@@ -197,14 +197,14 @@
         res.cookie('refreshToken', refreshToken, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         });
 
         res.cookie('accessToken', accessToken, {
           httpOnly: true,
           secure: true,
-          sameSite: 'none',
+          sameSite: 'lax',
           maxAge: 15 * 60 * 1000, // 15 minutes
         });
 
