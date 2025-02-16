@@ -15,6 +15,7 @@ import { TokenService } from 'src/token/token.service';
 import { FileService } from 'src/file/file.service';
 import { User } from 'src/user/user.model';
 
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -32,7 +33,10 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async validateUser(email: string, password: string): Promise<null | Partial<User>> {
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<null | Partial<User>> {
     const user = await this.usersService.findByEmail(email);
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
       const { passwordHash, ...result } = user;
