@@ -61,10 +61,13 @@ export class CollaborationSessionGateway
   async handleConnection(@ConnectedSocket() client: Socket) {
     try {
       const cookiesHeader = client.handshake.headers.cookie;
+      console.log('cookiesHeader', cookiesHeader);
       if (!cookiesHeader) {
         throw new UnauthorizedException('No cookies found in request');
       }
       const cookies = parse(cookiesHeader);
+      console.log('cookies', cookies);
+
       let accessToken = cookies['accessToken'];
       let refreshToken = cookies['refreshToken'];
 
@@ -86,7 +89,7 @@ export class CollaborationSessionGateway
           refreshToken = newRefreshToken;
           decoded = verify(accessToken, process.env.JWT_ACCESS_SECRET);
 
-          // update cookies on the client handshake
+          console.log('decoded', decoded);
           client.handshake.headers.cookie = `accessToken=${accessToken}; refreshToken=${refreshToken}`;
           // tell the client we refreshed
           client.emit('refreshedTokens', {
@@ -97,7 +100,7 @@ export class CollaborationSessionGateway
           throw new UnauthorizedException(error.message);
         }
       }
-
+      console.log('here');
       if (!decoded?.sub) {
         throw new UnauthorizedException('Invalid token payload');
       }
@@ -107,6 +110,8 @@ export class CollaborationSessionGateway
 
       // Auto-join the "dashboard_userId" room
       const roomName = `dashboard_${client.data.userId}`;
+      console.log('roomName', roomName);
+
       client.join(roomName);
       this.logger.log(`User ${client.data.userId} auto-joined: ${roomName}`);
     } catch (error) {
