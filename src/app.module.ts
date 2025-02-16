@@ -19,7 +19,8 @@ import { FileModule } from './file/file.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // envFilePath: `.development.env`,
+      envFilePath:
+        process.env.NODE_ENV === 'development' ? '.development.env' : undefined,
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
