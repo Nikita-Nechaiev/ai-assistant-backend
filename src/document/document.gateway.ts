@@ -17,11 +17,10 @@ import { Permission } from 'src/user-collaboration-session/user-collaboration-se
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { SessionStateService } from 'src/collaboration-session/session-state.service';
 
-
 @WebSocketGateway({
   path: '/collaboration-session-socket',
   cors: {
-    origin: ['http://localhost:3000'],
+    origin: [process.env.FRONTEND_URL],
     credentials: true,
   },
 })

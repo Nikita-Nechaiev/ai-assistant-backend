@@ -34,7 +34,7 @@ import { User } from 'src/user/user.model';
 @WebSocketGateway({
   path: '/collaboration-session-socket',
   cors: {
-    origin: ['http://localhost:3000'],
+    origin: [process.env.FRONTEND_URL],
     credentials: true,
   },
 })

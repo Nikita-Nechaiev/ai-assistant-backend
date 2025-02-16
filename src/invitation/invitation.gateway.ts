@@ -24,7 +24,7 @@ import { SessionStateService } from 'src/collaboration-session/session-state.ser
 @WebSocketGateway({
   path: '/collaboration-session-socket',
   cors: {
-    origin: ['http://localhost:3000'],
+    origin: [process.env.FRONTEND_URL],
     credentials: true,
   },
 })
