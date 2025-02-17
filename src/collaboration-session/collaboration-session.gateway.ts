@@ -66,7 +66,6 @@ export class CollaborationSessionGateway
         throw new UnauthorizedException('No cookies found in request');
       }
       const cookies = parse(cookiesHeader);
-      console.log('cookies', cookies);
 
       let accessToken = cookies['accessToken'];
       let refreshToken = cookies['refreshToken'];
@@ -85,21 +84,18 @@ export class CollaborationSessionGateway
         if (error.name === 'TokenExpiredError') {
           const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
             await this.authService.refresh(refreshToken);
-          decoded = verify(newAccessToken, process.env.JWT_ACCESS_SECRET);
+          accessToken = newAccessToken;
+          refreshToken = newRefreshToken;
+          decoded = verify(accessToken, process.env.JWT_ACCESS_SECRET);
 
           console.log('decoded', decoded);
-          // client.handshake.headers.cookie = `accessToken=${newAccessToken}; refreshToken=${newRefreshToken}`;
-          // tell the client we refreshed
-          client.emit('refreshedTokens', {
-            newAccessToken,
-            refreshToken: newRefreshToken,
-          });
+          client.handshake.headers.cookie = `accessToken=${accessToken}; refreshToken=${refreshToken}`;
         } else {
           throw new UnauthorizedException(error.message);
         }
       }
-      console.log('here');
       if (!decoded?.sub) {
+        console.log('Invalid token payload');
         throw new UnauthorizedException('Invalid token payload');
       }
 
