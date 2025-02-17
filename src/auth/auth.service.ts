@@ -15,7 +15,6 @@ import { TokenService } from 'src/token/token.service';
 import { FileService } from 'src/file/file.service';
 import { User } from 'src/user/user.model';
 
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -107,10 +106,12 @@ export class AuthService {
     accessToken: string;
     user: Partial<User>;
   }> {
+    console.log('refresh func1', refreshToken);
     const userData = this.tokenService.validateRefreshToken(refreshToken);
     if (!userData) {
       throw new UnauthorizedException('Invalid refresh token');
     }
+    console.log('refresh func2', userData);
 
     const user = await this.usersService.findById(userData.sub);
     if (!user) {
@@ -118,6 +119,8 @@ export class AuthService {
     }
 
     const tokens = await this.generateAndSaveTokens(user);
+    console.log('refresh func3', tokens);
+
     return {
       ...tokens,
       user: this.sanitizeUser(user),
