@@ -85,15 +85,13 @@ export class CollaborationSessionGateway
         if (error.name === 'TokenExpiredError') {
           const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
             await this.authService.refresh(refreshToken);
-          accessToken = newAccessToken;
-          refreshToken = newRefreshToken;
-          decoded = verify(accessToken, process.env.JWT_ACCESS_SECRET);
+          decoded = verify(newAccessToken, process.env.JWT_ACCESS_SECRET);
 
           console.log('decoded', decoded);
-          client.handshake.headers.cookie = `accessToken=${accessToken}; refreshToken=${refreshToken}`;
+          // client.handshake.headers.cookie = `accessToken=${newAccessToken}; refreshToken=${newRefreshToken}`;
           // tell the client we refreshed
           client.emit('refreshedTokens', {
-            accessToken,
+            newAccessToken,
             refreshToken: newRefreshToken,
           });
         } else {
