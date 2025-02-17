@@ -61,7 +61,7 @@ export class CollaborationSessionGateway
   async handleConnection(@ConnectedSocket() client: Socket) {
     try {
       const cookiesHeader = client.handshake.headers.cookie;
-      console.log('cookiesHeader', cookiesHeader);
+      console.log('client headers', client.handshake.headers);
       if (!cookiesHeader) {
         throw new UnauthorizedException('No cookies found in request');
       }
