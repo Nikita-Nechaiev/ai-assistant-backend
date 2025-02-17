@@ -21,6 +21,9 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 
+const isProduction = process.env.NODE_ENV === 'production';
+const cookieDomain = isProduction ? '.ai-editor-portfolio.com' : undefined;
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -39,7 +42,7 @@ export class AuthController {
       secure: true,
       sameSite: 'strict',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      domain: '.ai-editor-portfolio.com',
+      domain: cookieDomain,
     });
 
     if (accessToken) {
@@ -48,7 +51,7 @@ export class AuthController {
         secure: true,
         sameSite: 'strict',
         maxAge: 15 * 60 * 1000,
-        domain: '.ai-editor-portfolio.com',
+        domain: cookieDomain,
       });
     }
 
@@ -73,7 +76,7 @@ export class AuthController {
       secure: true,
       sameSite: 'strict',
       maxAge: 30 * 24 * 60 * 60 * 1000,
-      domain: '.ai-editor-portfolio.com',
+      domain: cookieDomain,
     });
 
     if (accessToken) {
@@ -82,7 +85,7 @@ export class AuthController {
         secure: true,
         sameSite: 'strict',
         maxAge: 15 * 60 * 1000,
-        domain: '.ai-editor-portfolio.com',
+        domain: cookieDomain,
       });
     }
 
@@ -93,27 +96,22 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies.refreshToken;
-
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token found');
     }
-
     await this.authService.logout(refreshToken);
-
     res.clearCookie('refreshToken', {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
-      domain: '.ai-editor-portfolio.com',
+      domain: cookieDomain,
     });
-
     res.clearCookie('accessToken', {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
-      domain: '.ai-editor-portfolio.com',
+      domain: cookieDomain,
     });
-
     return { message: 'Logged out successfully' };
   }
 
@@ -124,55 +122,40 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken = req.cookies.refreshToken;
-
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token found');
     }
-
     const { refreshToken: newRefreshToken, accessToken } =
       await this.authService.refresh(refreshToken);
-
-    if (newRefreshToken) {
-      res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        domain: '.ai-editor-portfolio.com',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      });
-    }
-
-    if (accessToken) {
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        domain: '.ai-editor-portfolio.com',
-        maxAge: 15 * 60 * 1000,
-      });
-    }
-
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      domain: cookieDomain,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      domain: cookieDomain,
+      maxAge: 15 * 60 * 1000,
+    });
     return { message: 'Refresh token set in cookies' };
   }
 
   @Get('get-tokens')
   @HttpCode(HttpStatus.OK)
-  async refreshWithToken(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async refreshWithToken(@Req() req: Request) {
     const refreshToken = req.cookies.refreshToken;
-
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token found');
     }
-
     const {
       refreshToken: newRefreshToken,
       accessToken,
       user,
     } = await this.authService.refresh(refreshToken);
-
     return { accessToken, newRefreshToken, user };
   }
 
@@ -206,25 +189,20 @@ export class AuthController {
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        domain: '.ai-editor-portfolio.com',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        domain: cookieDomain,
       });
-
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
-        maxAge: 15 * 60 * 1000, // 15 minutes
-        domain: '.ai-editor-portfolio.com',
+        maxAge: 15 * 60 * 1000,
+        domain: cookieDomain,
       });
-
-      const frontendUrl = `${process.env.FRONTEND_URL}/dashboard`;
-      return res.redirect(frontendUrl);
+      return res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
     } catch (error) {
       console.error('Error during Google login callback:', error);
-
-      const loginUrl = `${process.env.FRONTEND_URL}/login`;
-      return res.redirect(loginUrl);
+      return res.redirect(`${process.env.FRONTEND_URL}/login`);
     }
   }
 }

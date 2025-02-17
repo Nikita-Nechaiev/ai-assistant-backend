@@ -46,7 +46,6 @@ export class InvitationGateway {
   @SubscribeMessage('joinDashboard')
   async handleJoinDashboard(@ConnectedSocket() client: Socket) {
     const userId = client.data.userId;
-    console.log('userId from dashboard', userId);
     if (!userId) {
       client.emit('error', 'User not identified');
       return;
