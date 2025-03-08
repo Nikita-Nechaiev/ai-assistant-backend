@@ -174,8 +174,8 @@ export class AiToolUsageService {
     });
   }
 
-  async generateText(userId: number, prompt: string, documentId?: number) {
-    return this.processAiTool('Text Generation', userId, prompt, documentId, {
+  async generateText(userId: number, text: string, documentId?: number) {
+    return this.processAiTool('Text Generation', userId, text, documentId, {
       role: 'system',
       content: 'Generate text based on the following prompt.',
     });

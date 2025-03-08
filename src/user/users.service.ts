@@ -63,7 +63,7 @@ export class UsersService {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return this.userRepository.find();
+    return this.userRepository.find({ order: { createdAt: 'DESC' } });
   }
 
   async updateResetToken(

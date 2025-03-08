@@ -116,11 +116,11 @@ export class AiToolUsageController {
   @Post('text-generation/:documentId?')
   async generateText(
     @Req() req,
-    @Body('prompt') prompt: string,
+    @Body('text') text: string,
     @Param('documentId') documentId?: number,
   ) {
     const userId = req.user.id;
-    return this.aiToolUsageService.generateText(userId, prompt, documentId);
+    return this.aiToolUsageService.generateText(userId, text, documentId);
   }
 
   @Post('readability-analysis/:documentId?')
