@@ -47,7 +47,7 @@ export class DocumentService {
   ): Promise<{ document: Document; version: Version }> {
     const newDocument = this.documentRepository.create({
       title,
-      richContent: '',
+      richContent: ' ',
       collaborationSession: { id: sessionId } as any,
     });
 

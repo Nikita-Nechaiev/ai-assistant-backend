@@ -22,13 +22,27 @@ export class VersionService {
     document: Document,
     richContent: any,
     userEmail: string,
-  ): Promise<Version> {
-    const version = this.versionRepository.create({
+  ): Promise<Version | null> {
+    const previousVersion = await this.versionRepository.findOne({
+      where: { document: { id: document.id } },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (previousVersion) {
+      const isSameContent =
+        JSON.stringify(previousVersion.richContent) ===
+        JSON.stringify(richContent);
+      if (isSameContent) {
+        return null;
+      }
+    }
+
+    const newVersion = this.versionRepository.create({
       document,
       richContent,
       userEmail,
     });
-    return this.versionRepository.save(version);
+    return this.versionRepository.save(newVersion);
   }
 
   async findById(versionId: number): Promise<Version> {
