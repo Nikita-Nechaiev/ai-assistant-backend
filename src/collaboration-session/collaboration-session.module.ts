@@ -16,14 +16,10 @@ import { UsersModule } from 'src/user/users.module';
     UserCollaborationSessionModule,
     MessagesModule,
     AuthModule,
-    UsersModule
+    UsersModule,
   ],
   controllers: [CollaborationSessionController],
-  providers: [
-    CollaborationSessionService,
-    CollaborationSessionGateway,
-    SessionStateService,
-  ],
+  providers: [CollaborationSessionService, CollaborationSessionGateway, SessionStateService],
   exports: [CollaborationSessionService, SessionStateService],
 })
 export class CollaborationSessionModule {}

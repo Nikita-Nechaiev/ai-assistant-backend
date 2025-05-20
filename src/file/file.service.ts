@@ -5,13 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class FileService {
-  private readonly uploadDir = path.join(
-    __dirname,
-    '..',
-    '..',
-    'uploads',
-    'avatars',
-  );
+  private readonly uploadDir = path.join(__dirname, '..', '..', 'uploads', 'avatars');
   private readonly defaultAvatar = '/uploads/avatars/default-ava.webp';
 
   constructor() {

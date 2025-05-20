@@ -1,15 +1,6 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  UseGuards,
-  Req,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards, Req, Query } from '@nestjs/common';
 import { AiToolUsageService } from './ai-tool-usage.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('ai-tool-usage')
 @UseGuards(JwtAuthGuard)
@@ -26,18 +17,15 @@ export class AiToolUsageController {
     const userId = req.user.id;
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
-    return this.aiToolUsageService.getUsageByUser(
-      userId,
-      pageNum,
-      limitNum,
-      search,
-    );
+
+    return this.aiToolUsageService.getUsageByUser(userId, pageNum, limitNum, search);
   }
 
   @Get('user/most-used-tool')
   async getMostFrequentAiTool(@Req() req: any) {
     const userId = req.user.id; // Extract user ID from JWT payload
     const stats = await this.aiToolUsageService.getMostFrequentAiTool(userId);
+
     return stats;
   }
 
@@ -47,43 +35,30 @@ export class AiToolUsageController {
   }
 
   @Post('grammar-check/:documentId?')
-  async checkGrammar(
-    @Req() req,
-    @Body('text') text: string,
-    @Param('documentId') documentId?: number,
-  ) {
+  async checkGrammar(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
     const userId = req.user.id;
+
     return this.aiToolUsageService.checkGrammar(userId, text, documentId);
   }
 
   @Post('tone-analysis/:documentId?')
-  async analyzeTone(
-    @Req() req,
-    @Body('text') text: string,
-    @Param('documentId') documentId?: number,
-  ) {
+  async analyzeTone(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
     const userId = req.user.id;
 
     return this.aiToolUsageService.analyzeTone(userId, text, documentId);
   }
 
   @Post('summarization/:documentId?')
-  async summarizeText(
-    @Req() req,
-    @Body('text') text: string,
-    @Param('documentId') documentId?: number,
-  ) {
+  async summarizeText(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
     const userId = req.user.id;
+
     return this.aiToolUsageService.summarizeText(userId, text, documentId);
   }
 
   @Post('rephrase/:documentId?')
-  async rephraseText(
-    @Req() req,
-    @Body('text') text: string,
-    @Param('documentId') documentId?: number,
-  ) {
+  async rephraseText(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
     const userId = req.user.id;
+
     return this.aiToolUsageService.rephraseText(userId, text, documentId);
   }
 
@@ -95,51 +70,35 @@ export class AiToolUsageController {
     @Param('documentId') documentId?: number,
   ) {
     const userId = req.user.id;
-    return this.aiToolUsageService.translateText(
-      userId,
-      text,
-      targetLanguage,
-      documentId,
-    );
+
+    return this.aiToolUsageService.translateText(userId, text, targetLanguage, documentId);
   }
 
   @Post('keyword-extraction/:documentId?')
-  async extractKeywords(
-    @Req() req,
-    @Body('text') text: string,
-    @Param('documentId') documentId?: number,
-  ) {
+  async extractKeywords(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
     const userId = req.user.id;
+
     return this.aiToolUsageService.extractKeywords(userId, text, documentId);
   }
 
   @Post('text-generation/:documentId?')
-  async generateText(
-    @Req() req,
-    @Body('text') text: string,
-    @Param('documentId') documentId?: number,
-  ) {
+  async generateText(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
     const userId = req.user.id;
+
     return this.aiToolUsageService.generateText(userId, text, documentId);
   }
 
   @Post('readability-analysis/:documentId?')
-  async analyzeReadability(
-    @Req() req,
-    @Body('text') text: string,
-    @Param('documentId') documentId?: number,
-  ) {
+  async analyzeReadability(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
     const userId = req.user.id;
+
     return this.aiToolUsageService.analyzeReadability(userId, text, documentId);
   }
 
   @Post('title-generation/:documentId?')
-  async generateTitle(
-    @Req() req,
-    @Body('text') text: string,
-    @Param('documentId') documentId?: number,
-  ) {
+  async generateTitle(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
     const userId = req.user.id;
+
     return this.aiToolUsageService.generateTitle(userId, text, documentId);
   }
 }

@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsDate, IsEmail, IsString } from 'class-validator';
-import { InvitationStatus, NotificationStatus } from '../invitation.model';
+import { InvitationStatus, NotificationStatus } from 'src/common/enums/enums';
 
 export class UpdateInvitationDto {
   @IsOptional()

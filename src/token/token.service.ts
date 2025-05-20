@@ -30,10 +30,12 @@ export class TokenService {
 
     if (tokenData) {
       tokenData.refreshToken = refreshToken;
+
       return this.tokenRepository.save(tokenData);
     }
 
     const token = this.tokenRepository.create({ userId, refreshToken });
+
     return this.tokenRepository.save(token);
   }
 
@@ -46,6 +48,7 @@ export class TokenService {
       const userData = this.jwtService.verify(refreshToken, {
         secret: process.env.JWT_REFRESH_SECRET,
       });
+
       return userData;
     } catch (e) {
       return null;
@@ -55,6 +58,7 @@ export class TokenService {
   validateAccessToken(accessToken: string) {
     try {
       const userData = this.jwtService.verify(accessToken);
+
       return userData;
     } catch (e) {
       return null;

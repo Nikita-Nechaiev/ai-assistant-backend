@@ -1,12 +1,7 @@
 import { Entity, ManyToOne, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 import { User } from 'src/user/user.model';
 import { CollaborationSession } from 'src/collaboration-session/collaboration-session.model';
-
-export enum Permission {
-  READ = 'read',
-  EDIT = 'edit',
-  ADMIN = 'admin',
-}
+import { Permission } from 'src/common/enums/enums';
 
 @Entity('user_collaboration_sessions')
 export class UserCollaborationSession {
@@ -18,13 +13,9 @@ export class UserCollaborationSession {
   })
   user: User;
 
-  @ManyToOne(
-    () => CollaborationSession,
-    (session) => session.userCollaborationSessions,
-    {
-      onDelete: 'CASCADE',
-    },
-  )
+  @ManyToOne(() => CollaborationSession, (session) => session.userCollaborationSessions, {
+    onDelete: 'CASCADE',
+  })
   session: CollaborationSession;
 
   @Column({

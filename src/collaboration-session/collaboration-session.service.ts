@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { CollaborationSession } from './collaboration-session.model';
 import { UsersService } from 'src/user/users.service';
-import { Permission } from 'src/user-collaboration-session/user-collaboration-session.model';
 import { UserCollaborationSessionService } from 'src/user-collaboration-session/user-collaboration-session.service';
+import { Permission } from 'src/common/enums/enums';
 
 @Injectable()
 export class CollaborationSessionService {
@@ -15,18 +15,12 @@ export class CollaborationSessionService {
     private readonly userCollaborationSessionService: UserCollaborationSessionService,
   ) {}
 
-  async getUserSessions(
-    userId: number,
-    skip: number,
-    take: number,
-    search?: string,
-  ) {
-    const userCollabSessions =
-      await this.userCollaborationSessionService.getUserCollaborationSessions(
-        userId,
-        skip,
-        take,
-      );
+  async getUserSessions(userId: number, skip: number, take: number, search?: string) {
+    const userCollabSessions = await this.userCollaborationSessionService.getUserCollaborationSessions(
+      userId,
+      skip,
+      take,
+    );
 
     const sessionIds = userCollabSessions.map((ucs) => ucs.session.id);
 
@@ -44,12 +38,9 @@ export class CollaborationSessionService {
       .take(take);
 
     if (search) {
-      queryBuilder = queryBuilder.andWhere(
-        'LOWER(session.name) ILIKE :search',
-        {
-          search: `%${search.toLowerCase()}%`,
-        },
-      );
+      queryBuilder = queryBuilder.andWhere('LOWER(session.name) ILIKE :search', {
+        search: `%${search.toLowerCase()}%`,
+      });
     }
 
     const sessions = await queryBuilder.getMany();
@@ -60,10 +51,7 @@ export class CollaborationSessionService {
       createdAt: session.createdAt,
       lastInteracted: session.userCollaborationSessions
         .map((ucs) => ucs.lastInteracted)
-        .sort(
-          (a, b) =>
-            (b ? new Date(b).getTime() : 0) - (a ? new Date(a).getTime() : 0),
-        )[0],
+        .sort((a, b) => (b ? new Date(b).getTime() : 0) - (a ? new Date(a).getTime() : 0))[0],
       collaborators: session.userCollaborationSessions.map((ucs) => ({
         id: ucs.user.id,
         name: ucs.user.name,
@@ -73,26 +61,23 @@ export class CollaborationSessionService {
     }));
   }
 
-  async createSession(
-    userId: number,
-    name: string,
-  ): Promise<CollaborationSession> {
+  async createSession(userId: number, name: string): Promise<CollaborationSession> {
     const user = await this.userService.findById(userId);
 
     if (!user) {
       throw new Error('User not found');
     }
+
     const session = this.collaborationSessionRepository.create({
       name,
     });
-    const savedSession =
-      await this.collaborationSessionRepository.save(session);
+    const savedSession = await this.collaborationSessionRepository.save(session);
 
-    await this.userCollaborationSessionService.createSession(
-      userId,
-      savedSession.id,
-      [Permission.EDIT, Permission.READ, Permission.ADMIN],
-    );
+    await this.userCollaborationSessionService.createSession(userId, savedSession.id, [
+      Permission.EDIT,
+      Permission.READ,
+      Permission.ADMIN,
+    ]);
 
     return savedSession;
   }
@@ -132,10 +117,7 @@ export class CollaborationSessionService {
     return session;
   }
 
-  async updateSessionName(
-    id: number,
-    name: string,
-  ): Promise<CollaborationSession> {
+  async updateSessionName(id: number, name: string): Promise<CollaborationSession> {
     const session = await this.collaborationSessionRepository.findOne({
       where: { id },
     });
@@ -145,6 +127,7 @@ export class CollaborationSessionService {
     }
 
     session.name = name;
+
     return this.collaborationSessionRepository.save(session);
   }
 

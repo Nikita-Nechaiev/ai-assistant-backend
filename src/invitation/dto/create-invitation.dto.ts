@@ -1,15 +1,8 @@
 import { Type } from 'class-transformer';
-import {
-  IsEnum,
-  IsOptional,
-  IsEmail,
-  IsDate,
-  ValidateNested,
-} from 'class-validator';
-import { InvitationStatus, NotificationStatus } from '../invitation.model';
-import { Permission } from 'src/user-collaboration-session/user-collaboration-session.model';
+import { IsEnum, IsOptional, IsEmail, IsDate, ValidateNested } from 'class-validator';
 import { User } from 'src/user/user.model';
 import { CollaborationSession } from 'src/collaboration-session/collaboration-session.model';
+import { InvitationStatus, NotificationStatus, Permission } from 'src/common/enums/enums';
 
 export class CreateInvitationDto {
   @IsEnum(Permission)

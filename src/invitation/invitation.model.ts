@@ -1,23 +1,7 @@
 import { CollaborationSession } from 'src/collaboration-session/collaboration-session.model';
-import { Permission } from 'src/user-collaboration-session/user-collaboration-session.model';
+import { InvitationStatus, NotificationStatus, Permission } from 'src/common/enums/enums';
 import { User } from 'src/user/user.model';
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  CreateDateColumn,
-} from 'typeorm';
-
-export enum InvitationStatus {
-  PENDING = 'pending',
-  ACCEPTED = 'accepted',
-}
-
-export enum NotificationStatus {
-  UNREAD = 'unread',
-  READ = 'read',
-}
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from 'typeorm';
 
 @Entity('invitations')
 export class Invitation {

@@ -5,10 +5,7 @@ import { UserCollaborationSessionService } from './user-collaboration-session.se
 import { UsersModule } from 'src/user/users.module';
 
 @Module({
-  imports: [
-    UsersModule,
-    TypeOrmModule.forFeature([UserCollaborationSession]),
-  ],
+  imports: [UsersModule, TypeOrmModule.forFeature([UserCollaborationSession])],
   providers: [UserCollaborationSessionService],
   exports: [UserCollaborationSessionService],
 })

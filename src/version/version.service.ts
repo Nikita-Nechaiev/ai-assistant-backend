@@ -18,20 +18,15 @@ export class VersionService {
     });
   }
 
-  async createVersion(
-    document: Document,
-    richContent: any,
-    userEmail: string,
-  ): Promise<Version | null> {
+  async createVersion(document: Document, richContent: any, userEmail: string): Promise<Version | null> {
     const previousVersion = await this.versionRepository.findOne({
       where: { document: { id: document.id } },
       order: { createdAt: 'DESC' },
     });
 
     if (previousVersion) {
-      const isSameContent =
-        JSON.stringify(previousVersion.richContent) ===
-        JSON.stringify(richContent);
+      const isSameContent = JSON.stringify(previousVersion.richContent) === JSON.stringify(richContent);
+
       if (isSameContent) {
         return null;
       }
@@ -42,6 +37,7 @@ export class VersionService {
       richContent,
       userEmail,
     });
+
     return this.versionRepository.save(newVersion);
   }
 
@@ -50,9 +46,11 @@ export class VersionService {
       where: { id: versionId },
       relations: ['document'],
     });
+
     if (!version) {
       throw new NotFoundException(`Version with id ${versionId} not found`);
     }
+
     return version;
   }
 }

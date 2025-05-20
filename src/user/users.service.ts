@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Role, User } from './user.model';
+import { User } from './user.model';
 import * as bcrypt from 'bcrypt';
+import { Role } from 'src/common/enums/enums';
 
 @Injectable()
 export class UsersService {
@@ -27,13 +28,9 @@ export class UsersService {
     return user;
   }
 
-  async findOrCreateGoogleUser(
-    googleId: string,
-    email: string,
-    name: string,
-    avatar: string | null,
-  ): Promise<User> {
+  async findOrCreateGoogleUser(googleId: string, email: string, name: string, avatar: string | null): Promise<User> {
     let user = await this.userRepository.findOne({ where: { email } });
+
     if (!user) {
       user = this.userRepository.create({
         email,
@@ -46,6 +43,7 @@ export class UsersService {
       });
       await this.userRepository.save(user);
     }
+
     return user;
   }
 
@@ -59,6 +57,7 @@ export class UsersService {
       roles: userData.roles || [Role.USER],
       avatar: userData.avatar || null,
     });
+
     return this.userRepository.save(user);
   }
 
@@ -66,11 +65,7 @@ export class UsersService {
     return this.userRepository.find({ order: { createdAt: 'DESC' } });
   }
 
-  async updateResetToken(
-    userId: number,
-    resetToken: string,
-    expires: number,
-  ): Promise<void> {
+  async updateResetToken(userId: number, resetToken: string, expires: number): Promise<void> {
     await this.userRepository.update(userId, {
       resetToken,
       resetTokenExpires: expires,
@@ -79,11 +74,13 @@ export class UsersService {
 
   async findByResetToken(token: string): Promise<User | null> {
     const users = await this.userRepository.find();
+
     for (const user of users) {
       if (await bcrypt.compare(token, user.resetToken)) {
         return user;
       }
     }
+
     return null;
   }
 

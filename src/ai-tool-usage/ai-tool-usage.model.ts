@@ -1,12 +1,6 @@
 import { Document } from 'src/document/document.model';
 import { User } from 'src/user/user.model';
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  CreateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from 'typeorm';
 
 @Entity('ai_tool_usage')
 export class AiToolUsage {

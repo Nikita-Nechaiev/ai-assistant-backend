@@ -1,18 +1,8 @@
 import { AiToolUsage } from 'src/ai-tool-usage/ai-tool-usage.model';
+import { Role } from 'src/common/enums/enums';
 import { Invitation } from 'src/invitation/invitation.model';
 import { UserCollaborationSession } from 'src/user-collaboration-session/user-collaboration-session.model';
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  OneToMany,
-} from 'typeorm';
-
-export enum Role {
-  USER = 'user',
-  ADMIN = 'admin',
-}
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
 
 @Entity('users')
 export class User {

@@ -1,10 +1,4 @@
-import {
-  WebSocketGateway,
-  SubscribeMessage,
-  ConnectedSocket,
-  MessageBody,
-  WebSocketServer,
-} from '@nestjs/websockets';
+import { WebSocketGateway, SubscribeMessage, ConnectedSocket, MessageBody, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
@@ -13,13 +7,9 @@ import { CollaborationSessionService } from 'src/collaboration-session/collabora
 import { UserCollaborationSessionService } from 'src/user-collaboration-session/user-collaboration-session.service';
 import { UsersService } from 'src/user/users.service';
 
-import {
-  InvitationStatus,
-  NotificationStatus,
-} from 'src/invitation/invitation.model';
-import { Permission } from 'src/user-collaboration-session/user-collaboration-session.model';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { SessionStateService } from 'src/collaboration-session/session-state.service';
+import { InvitationStatus, NotificationStatus, Permission } from 'src/common/enums/enums';
 
 @WebSocketGateway({
   path: '/collaboration-session-socket',
@@ -46,29 +36,36 @@ export class InvitationGateway {
   @SubscribeMessage('joinDashboard')
   async handleJoinDashboard(@ConnectedSocket() client: Socket) {
     const userId = client.data.userId;
+
     if (!userId) {
       client.emit('error', 'User not identified');
+
       return;
     }
 
     const roomName = `dashboard_${userId}`;
+
     client.join(roomName);
 
     this.logger.log(`User ${userId} joined dashboard room: ${roomName}`);
 
     const notifications = await this.invitationService.findByReceiverId(userId);
+
     client.emit('notifications', notifications);
   }
 
   @SubscribeMessage('getNotifications')
   async handleGetNotifications(@ConnectedSocket() client: Socket) {
     const userId = client.data.userId;
+
     if (!userId) {
       client.emit('error', 'User not identified');
+
       return;
     }
 
     const notifications = await this.invitationService.findByReceiverId(userId);
+
     client.emit('notifications', notifications);
   }
 
@@ -78,28 +75,23 @@ export class InvitationGateway {
     @MessageBody() data: { invitationId: number; status: NotificationStatus },
   ) {
     const userId = client.data.userId;
+
     if (!userId) {
       client.emit('error', 'User not identified');
+
       return;
     }
 
     try {
-      const updatedInvitation = await this.invitationService.update(
-        data.invitationId,
-        {
-          notificationStatus: data.status,
-        },
-      );
+      const updatedInvitation = await this.invitationService.update(data.invitationId, {
+        notificationStatus: data.status,
+      });
 
       const sessionRoom = `session_${updatedInvitation.session.id}`;
       const dashboardRoom = `dashboard_${userId}`;
 
-      this.server
-        .to(sessionRoom)
-        .emit('notificationUpdated', updatedInvitation);
-      this.server
-        .to(dashboardRoom)
-        .emit('notificationUpdated', updatedInvitation);
+      this.server.to(sessionRoom).emit('notificationUpdated', updatedInvitation);
+      this.server.to(dashboardRoom).emit('notificationUpdated', updatedInvitation);
 
       client.emit('notificationUpdated', updatedInvitation);
     } catch (error) {
@@ -109,16 +101,13 @@ export class InvitationGateway {
   }
 
   @SubscribeMessage('deleteNotification')
-  async handleDeleteNotification(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { invitationId: number },
-  ) {
+  async handleDeleteNotification(@ConnectedSocket() client: Socket, @MessageBody() data: { invitationId: number }) {
     try {
-      const invitation = await this.invitationService.findById(
-        data.invitationId,
-      );
+      const invitation = await this.invitationService.findById(data.invitationId);
+
       if (!invitation) {
         client.emit('error', 'Invitation not found');
+
         return;
       }
 
@@ -127,12 +116,8 @@ export class InvitationGateway {
 
       await this.invitationService.delete(data.invitationId);
 
-      this.server
-        .to(sessionRoom)
-        .emit('notificationDeleted', { invitationId: data.invitationId });
-      this.server
-        .to(dashboardRoom)
-        .emit('notificationDeleted', { invitationId: data.invitationId });
+      this.server.to(sessionRoom).emit('notificationDeleted', { invitationId: data.invitationId });
+      this.server.to(dashboardRoom).emit('notificationDeleted', { invitationId: data.invitationId });
 
       client.emit('notificationDeleted', { invitationId: data.invitationId });
 
@@ -146,20 +131,18 @@ export class InvitationGateway {
   }
 
   @SubscribeMessage('acceptInvitation')
-  async handleAcceptInvitation(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { invitationId: number },
-  ) {
+  async handleAcceptInvitation(@ConnectedSocket() client: Socket, @MessageBody() data: { invitationId: number }) {
     try {
       const userId = client.data.userId;
+
       if (!userId) {
         client.emit('error', 'User not identified');
+
         return;
       }
 
-      const invitation = await this.invitationService.acceptInvitation(
-        data.invitationId,
-      );
+      const invitation = await this.invitationService.acceptInvitation(data.invitationId);
+
       // Invitation used -> remove it
       await this.invitationService.delete(invitation.id);
 
@@ -168,15 +151,11 @@ export class InvitationGateway {
 
       client.emit('invitationAccepted', {
         invitationId: invitation.id,
-        sessionId: invitation.session.id,
+        invitationSessionId: invitation.session.id,
       });
 
-      this.server
-        .to(sessionRoom)
-        .emit('notificationDeleted', { invitationId: invitation.id });
-      this.server
-        .to(dashboardRoom)
-        .emit('notificationDeleted', { invitationId: invitation.id });
+      this.server.to(sessionRoom).emit('notificationDeleted', { invitationId: invitation.id });
+      this.server.to(dashboardRoom).emit('notificationDeleted', { invitationId: invitation.id });
     } catch (error) {
       this.logger.error(`Failed to accept invitation: ${error.message}`);
       client.emit('error', 'Failed to accept invitation');
@@ -197,61 +176,57 @@ export class InvitationGateway {
       const { email, role } = payload;
 
       const sessionId = this.sessionState.socketSessionMap.get(client.id);
+
       if (!sessionId) {
         client.emit('error', 'Session ID not found for this socket');
+
         return;
       }
 
-      const session =
-        await this.collaborationSessionService.findById(sessionId);
+      const session = await this.collaborationSessionService.findById(sessionId);
+
       if (!session) {
-        client.emit(
-          'error',
-          `CollaborationSession with id ${sessionId} not found`,
-        );
+        client.emit('error', `CollaborationSession with id ${sessionId} not found`);
+
         return;
       }
 
       const receiver = await this.userService.findByEmail(email);
+
       if (!receiver) {
         client.emit('error', `User with email ${email} not found`);
+
         return;
       }
 
       // check if user is already in session
-      const isAlreadyInSession =
-        await this.userCollaborationSessionService.findByUserAndSession(
-          receiver.id,
-          sessionId,
-        );
+      const isAlreadyInSession = await this.userCollaborationSessionService.findByUserAndSession(
+        receiver.id,
+        sessionId,
+      );
 
       if (isAlreadyInSession) {
-        client.emit(
-          'error',
-          `User with email ${email} is already a participant in this session`,
-        );
+        client.emit('error', `User with email ${email} is already a participant in this session`);
+
         return;
       }
 
       // check if there's an existing invitation
-      const existingInvitation =
-        await this.invitationService.findByReceiverAndSession(
-          receiver.id,
-          sessionId,
-        );
+      const existingInvitation = await this.invitationService.findByReceiverAndSession(receiver.id, sessionId);
+
       if (existingInvitation) {
-        client.emit(
-          'error',
-          `User with email ${email} already has an invitation for this session`,
-        );
+        client.emit('error', `User with email ${email} already has an invitation for this session`);
+
         return;
       }
 
       // get who is inviting
       const inviterId = client.data.userId;
       const inviter = await this.userService.findById(inviterId);
+
       if (!inviter) {
         client.emit('error', 'Inviter not found');
+
         return;
       }
 
@@ -269,10 +244,12 @@ export class InvitationGateway {
 
       // Send event to the user's dashboard
       const dashboardRoom = `dashboard_${receiver.id}`;
+
       this.server.to(dashboardRoom).emit('newInvitation', invitation);
 
       // Send event to the session's room
       const sessionRoom = `session_${sessionId}`;
+
       this.server.to(sessionRoom).emit('newInvitation', invitation);
 
       this.logger.log(
@@ -293,8 +270,7 @@ export class InvitationGateway {
         throw new Error('Session ID not found for this socket');
       }
 
-      const invitations =
-        await this.invitationService.getInvitationsForSession(sessionId);
+      const invitations = await this.invitationService.getInvitationsForSession(sessionId);
 
       client.emit('invitations', invitations);
     } catch (error) {
@@ -313,11 +289,7 @@ export class InvitationGateway {
       const { invitationId, newRole } = payload;
 
       // Update the invitation's role
-      const updatedInvitation =
-        await this.invitationService.changeInvitationRole(
-          invitationId,
-          newRole,
-        );
+      const updatedInvitation = await this.invitationService.changeInvitationRole(invitationId, newRole);
 
       // Get session and user IDs for broadcasting
       const sessionId = updatedInvitation.session.id;
@@ -331,13 +303,9 @@ export class InvitationGateway {
 
       // Broadcast the update to both the session and the user's dashboard
       this.server.to(sessionRoom).emit('invitationUpdated', updatedInvitation);
-      this.server
-        .to(dashboardRoom)
-        .emit('invitationUpdated', updatedInvitation);
+      this.server.to(dashboardRoom).emit('invitationUpdated', updatedInvitation);
 
-      this.logger.log(
-        `Invitation role changed (Session: ${sessionRoom}, Dashboard: ${dashboardRoom})`,
-      );
+      this.logger.log(`Invitation role changed (Session: ${sessionRoom}, Dashboard: ${dashboardRoom})`);
     } catch (error) {
       this.logger.error(`Error changing invitation role: ${error.message}`);
       client.emit('error', 'Failed to change invitation role');

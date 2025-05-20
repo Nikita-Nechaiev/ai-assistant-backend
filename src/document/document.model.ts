@@ -1,14 +1,7 @@
 import { CollaborationSession } from 'src/collaboration-session/collaboration-session.model';
 import { AiToolUsage } from 'src/ai-tool-usage/ai-tool-usage.model';
 import { Version } from 'src/version/version.model';
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  ManyToOne,
-  OneToMany,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany } from 'typeorm';
 
 @Entity('documents')
 export class Document {

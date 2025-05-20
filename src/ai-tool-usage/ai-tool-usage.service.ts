@@ -20,19 +20,10 @@ export class AiToolUsageService {
   }
 
   private cleanText(text: string): string {
-    return text
-      .replace(/\n/g, ' ')
-      .replace(/\\/g, '')
-      .replace(/\"/g, '')
-      .replace(/\s\s+/g, ' ');
+    return text.replace(/\n/g, ' ').replace(/\\/g, '').replace(/\"/g, '').replace(/\s\s+/g, ' ');
   }
 
-  async getUsageByUser(
-    userId: number,
-    page: number = 1,
-    limit: number = 8,
-    search?: string,
-  ): Promise<AiToolUsage[]> {
+  async getUsageByUser(userId: number, page: number = 1, limit: number = 8, search?: string): Promise<AiToolUsage[]> {
     const skip = (page - 1) * limit;
 
     let queryBuilder = this.aiToolUsageRepository
@@ -78,34 +69,35 @@ export class AiToolUsageService {
     }
 
     const toolFrequency: Record<string, number> = {};
+
     for (const entry of usage) {
       toolFrequency[entry.toolName] = (toolFrequency[entry.toolName] || 0) + 1;
     }
-    const mostFrequentTool = Object.keys(toolFrequency).reduce((a, b) =>
-      toolFrequency[a] > toolFrequency[b] ? a : b,
-    );
+
+    const mostFrequentTool = Object.keys(toolFrequency).reduce((a, b) => (toolFrequency[a] > toolFrequency[b] ? a : b));
 
     const totalUsageNumber = usage.length;
 
     let totalWordCount = 0;
+
     for (const entry of usage) {
       const wordCount = entry.result.split(/\s+/).filter(Boolean).length;
+
       totalWordCount += wordCount;
     }
 
-    const sortedUsage = usage
-      .slice()
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    const sortedUsage = usage.slice().sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     const firstAiUsage = sortedUsage[0].timestamp;
 
     const dayCounts: Record<string, number> = {};
+
     for (const entry of usage) {
       const day = entry.timestamp.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+
       dayCounts[day] = (dayCounts[day] || 0) + 1;
     }
-    const mostUsedDayStr = Object.keys(dayCounts).reduce((a, b) =>
-      dayCounts[a] > dayCounts[b] ? a : b,
-    );
+
+    const mostUsedDayStr = Object.keys(dayCounts).reduce((a, b) => (dayCounts[a] > dayCounts[b] ? a : b));
     const mostInDayUsage = new Date(mostUsedDayStr);
 
     return {
@@ -141,25 +133,18 @@ export class AiToolUsageService {
   async summarizeText(userId: number, text: string, documentId?: number) {
     return this.processAiTool('Summarization', userId, text, documentId, {
       role: 'system',
-      content:
-        'You are a text summarizer. In 2-4 sentences paraphrase the text',
+      content: 'You are a text summarizer. In 2-4 sentences paraphrase the text',
     });
   }
 
   async rephraseText(userId: number, text: string, documentId?: number) {
     return this.processAiTool('Rephrasing', userId, text, documentId, {
       role: 'system',
-      content:
-        'You are a text simplifier. Rephrase and simplify the following text.',
+      content: 'You are a text simplifier. Rephrase and simplify the following text.',
     });
   }
 
-  async translateText(
-    userId: number,
-    text: string,
-    targetLanguage: string,
-    documentId?: number,
-  ) {
+  async translateText(userId: number, text: string, targetLanguage: string, documentId?: number) {
     return this.processAiTool('Translation', userId, text, documentId, {
       role: 'system',
       content: `Translate the following text to ${targetLanguage}.`,
@@ -169,8 +154,7 @@ export class AiToolUsageService {
   async extractKeywords(userId: number, text: string, documentId?: number) {
     return this.processAiTool('Keyword Extraction', userId, text, documentId, {
       role: 'system',
-      content:
-        'Extract the key words and phrases from the following text. Do not write too much text',
+      content: 'Extract the key words and phrases from the following text. Do not write too much text',
     });
   }
 
@@ -182,18 +166,12 @@ export class AiToolUsageService {
   }
 
   async analyzeReadability(userId: number, text: string, documentId?: number) {
-    return this.processAiTool(
-      'Readability Analysis',
-      userId,
-      text,
-      documentId,
-      {
-        role: 'system',
-        content: `You MUST NOT write the text again.
+    return this.processAiTool('Readability Analysis', userId, text, documentId, {
+      role: 'system',
+      content: `You MUST NOT write the text again.
           Give the rate in format ... of 100 where 1 is a text that is read difficult and 100 is a text that can be read very easily .
           Also, shortly tell what is wrong with the text. You MUST NOT correct these mistakes.`,
-      },
-    );
+    });
   }
 
   async generateTitle(userId: number, text: string, documentId?: number) {
@@ -228,9 +206,11 @@ export class AiToolUsageService {
       });
 
       let result = response.choices[0]?.message?.content || '';
+
       result = this.cleanText(result);
 
       const aiToolUsage = new AiToolUsage();
+
       aiToolUsage.user = { id: userId } as User;
       aiToolUsage.toolName = toolName;
       aiToolUsage.sentText = text;
@@ -247,9 +227,7 @@ export class AiToolUsageService {
     }
   }
 
-  async analyzeTextMetrics(
-    text: string,
-  ): Promise<{ readabilityScore: number; toneAnalysis: number }> {
+  async analyzeTextMetrics(text: string): Promise<{ readabilityScore: number; toneAnalysis: number }> {
     try {
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -265,15 +243,9 @@ export class AiToolUsageService {
       const result = response.choices[0]?.message?.content || '{}';
       const parsedResult = JSON.parse(result);
 
-      if (
-        typeof parsedResult.readabilityScore === 'number' &&
-        typeof parsedResult.toneAnalysis === 'number'
-      ) {
+      if (typeof parsedResult.readabilityScore === 'number' && typeof parsedResult.toneAnalysis === 'number') {
         return {
-          readabilityScore: Math.min(
-            Math.max(parsedResult.readabilityScore, 1),
-            100,
-          ),
+          readabilityScore: Math.min(Math.max(parsedResult.readabilityScore, 1), 100),
           toneAnalysis: Math.min(Math.max(parsedResult.toneAnalysis, 1), 100),
         };
       } else {

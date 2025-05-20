@@ -29,11 +29,7 @@ export class MessagesService {
       .getOne();
   }
 
-  async createMessage(
-    sender: User,
-    collaborationSessionId: number,
-    text: string,
-  ): Promise<Message> {
+  async createMessage(sender: User, collaborationSessionId: number, text: string): Promise<Message> {
     const message = this.messageRepository.create({
       sender,
       collaborationSession: { id: collaborationSessionId },
@@ -41,12 +37,11 @@ export class MessagesService {
     });
 
     const savedMessage = await this.messageRepository.save(message);
+
     return this.getMessageWithSender(savedMessage.id);
   }
 
-  async getMessagesForSession(
-    collaborationSession: CollaborationSession,
-  ): Promise<Message[]> {
+  async getMessagesForSession(collaborationSession: CollaborationSession): Promise<Message[]> {
     return this.messageRepository.find({
       where: { collaborationSession: { id: collaborationSession.id } },
       order: { createdAt: 'ASC' },

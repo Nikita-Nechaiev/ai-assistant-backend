@@ -30,12 +30,8 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(
-    @Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const { accessToken, refreshToken, user } =
-      await this.authService.login(loginDto);
+  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const { accessToken, refreshToken, user } = await this.authService.login(loginDto);
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
@@ -66,10 +62,7 @@ export class AuthController {
     @UploadedFile() avatar: Express.Multer.File,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken, refreshToken, user } = await this.authService.register(
-      registerDto,
-      avatar,
-    );
+    const { accessToken, refreshToken, user } = await this.authService.register(registerDto, avatar);
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
@@ -96,9 +89,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies.refreshToken;
+
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token found');
     }
+
     await this.authService.logout(refreshToken);
     res.clearCookie('refreshToken', {
       httpOnly: true,
@@ -112,21 +107,21 @@ export class AuthController {
       sameSite: 'strict',
       domain: cookieDomain,
     });
+
     return { message: 'Logged out successfully' };
   }
 
   @Get('refresh-cookies')
   @HttpCode(HttpStatus.OK)
-  async setRefreshCookie(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async setRefreshCookie(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies.refreshToken;
+
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token found');
     }
-    const { refreshToken: newRefreshToken, accessToken } =
-      await this.authService.refresh(refreshToken);
+
+    const { refreshToken: newRefreshToken, accessToken } = await this.authService.refresh(refreshToken);
+
     res.cookie('refreshToken', newRefreshToken, {
       httpOnly: true,
       secure: true,
@@ -141,6 +136,7 @@ export class AuthController {
       domain: cookieDomain,
       maxAge: 15 * 60 * 1000,
     });
+
     return { message: 'Refresh token set in cookies' };
   }
 
@@ -148,14 +144,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refreshWithToken(@Req() req: Request) {
     const refreshToken = req.cookies.refreshToken;
+
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token found');
     }
-    const {
-      refreshToken: newRefreshToken,
-      accessToken,
-      user,
-    } = await this.authService.refresh(refreshToken);
+
+    const { refreshToken: newRefreshToken, accessToken, user } = await this.authService.refresh(refreshToken);
+
     return { accessToken, newRefreshToken, user };
   }
 
@@ -167,10 +162,7 @@ export class AuthController {
 
   @Post('reset-password/:token')
   @HttpCode(HttpStatus.OK)
-  async resetPassword(
-    @Param('token') token: string,
-    @Body() resetPasswordDto: ResetPasswordDto,
-  ) {
+  async resetPassword(@Param('token') token: string, @Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(token, resetPasswordDto);
   }
 
@@ -182,9 +174,8 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   async googleLoginCallback(@Req() req, @Res({ passthrough: true }) res) {
     try {
-      const { accessToken, refreshToken } = await this.authService.oauthLogin(
-        req.user,
-      );
+      const { accessToken, refreshToken } = await this.authService.oauthLogin(req.user);
+
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: true,
@@ -199,9 +190,11 @@ export class AuthController {
         maxAge: 15 * 60 * 1000,
         domain: cookieDomain,
       });
+
       return res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
     } catch (error) {
       console.error('Error during Google login callback:', error);
+
       return res.redirect(`${process.env.FRONTEND_URL}/login`);
     }
   }

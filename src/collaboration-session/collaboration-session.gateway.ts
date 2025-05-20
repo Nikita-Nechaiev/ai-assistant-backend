@@ -18,10 +18,10 @@ import { UserCollaborationSessionService } from 'src/user-collaboration-session/
 import { AuthService } from 'src/auth/auth.service';
 import { MessagesService } from 'src/messages/messages.service';
 
-import { Permission } from 'src/user-collaboration-session/user-collaboration-session.model';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { SessionStateService } from './session-state.service'; // <-- Our shared state
 import { User } from 'src/user/user.model';
+import { Permission } from 'src/common/enums/enums';
 
 /**
  * This gateway deals with:
@@ -38,9 +38,7 @@ import { User } from 'src/user/user.model';
     credentials: true,
   },
 })
-export class CollaborationSessionGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+export class CollaborationSessionGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() private server: Server;
   private readonly logger = new Logger('CollaborationSessionGateway');
 
@@ -53,17 +51,17 @@ export class CollaborationSessionGateway
   ) {}
 
   afterInit(server: Server) {
-    this.logger.log(
-      'WebSocket Gateway initialized at /collaboration-session-socket',
-    );
+    this.logger.log('WebSocket Gateway initialized at /collaboration-session-socket');
   }
 
   async handleConnection(@ConnectedSocket() client: Socket) {
     try {
       const cookiesHeader = client.handshake.headers.cookie;
+
       if (!cookiesHeader) {
         throw new UnauthorizedException('No cookies found in request');
       }
+
       const cookies = parse(cookiesHeader);
 
       let accessToken = cookies['accessToken'];
@@ -72,17 +70,20 @@ export class CollaborationSessionGateway
       if (!accessToken) {
         throw new UnauthorizedException('Access token not found in cookies');
       }
+
       if (!refreshToken) {
         throw new UnauthorizedException('Refresh token not found in cookies');
       }
 
       let decoded: any;
+
       try {
         decoded = verify(accessToken, process.env.JWT_ACCESS_SECRET);
       } catch (error) {
         if (error.name === 'TokenExpiredError') {
           const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
             await this.authService.refresh(refreshToken);
+
           accessToken = newAccessToken;
           refreshToken = newRefreshToken;
           decoded = verify(accessToken, process.env.JWT_ACCESS_SECRET);
@@ -92,6 +93,7 @@ export class CollaborationSessionGateway
           throw new UnauthorizedException(error.message);
         }
       }
+
       if (!decoded?.sub) {
         throw new UnauthorizedException('Invalid token payload');
       }
@@ -116,6 +118,7 @@ export class CollaborationSessionGateway
 
     if (userId) {
       const userData = this.sessionState.onlineUsers.get(userId);
+
       if (userData) {
         userData.socketIds.delete(client.id);
 
@@ -123,30 +126,18 @@ export class CollaborationSessionGateway
         if (userData.socketIds.size === 0) {
           const timeSpentSeconds = (Date.now() - userData.startTime) / 1000;
 
-          const sessionExists =
-            await this.collaborationSessionService.findById(sessionId);
+          const sessionExists = await this.collaborationSessionService.findById(sessionId);
+
           if (sessionExists) {
-            await this.userCollaborationSessionService.updateTimeSpent(
-              userId,
-              sessionId,
-              timeSpentSeconds,
-            );
+            await this.userCollaborationSessionService.updateTimeSpent(userId, sessionId, timeSpentSeconds);
 
-            await this.userCollaborationSessionService.updateLastInteracted(
-              userId,
-              sessionId,
-              new Date(),
-            );
+            await this.userCollaborationSessionService.updateLastInteracted(userId, sessionId, new Date());
 
-            this.logger.log(
-              `User ${userId} spent ${timeSpentSeconds}s in the session (${sessionId}).`,
-            );
+            this.logger.log(`User ${userId} spent ${timeSpentSeconds}s in the session (${sessionId}).`);
 
             this.server.to(`session_${sessionId}`).emit('userLeft', { userId });
           } else {
-            this.logger.warn(
-              `Session ${sessionId} has already been deleted. Skipping updates.`,
-            );
+            this.logger.warn(`Session ${sessionId} has already been deleted. Skipping updates.`);
           }
 
           this.sessionState.onlineUsers.delete(userId);
@@ -162,24 +153,18 @@ export class CollaborationSessionGateway
   //                     SESSION (JOIN, LEAVE, DELETE, ETC.)
   // ---------------------------------------------------------------------------
   @SubscribeMessage('joinSession')
-  async handleJoinSession(
-    @MessageBody('sessionId') sessionId: number,
-    @ConnectedSocket() client: Socket,
-  ) {
+  async handleJoinSession(@MessageBody('sessionId') sessionId: number, @ConnectedSocket() client: Socket) {
     const userId = client.data.userId;
 
     this.sessionState.socketSessionMap.set(client.id, sessionId);
 
-    const userSession =
-      await this.userCollaborationSessionService.findByUserAndSession(
-        userId,
-        sessionId,
-      );
+    const userSession = await this.userCollaborationSessionService.findByUserAndSession(userId, sessionId);
 
     if (!userSession) {
       client.emit('invalidSession', {
         message: 'You do not have permission to access this page',
       });
+
       return;
     }
 
@@ -196,22 +181,21 @@ export class CollaborationSessionGateway
     } else {
       const partialSeconds = (Date.now() - existingData.startTime) / 1000;
       const currentTime = timeSpent + partialSeconds;
+
       existingData.socketIds.add(client.id);
       client.emit('currentTime', { totalTime: currentTime });
     }
 
     client.join(`session_${sessionId}`);
 
-    const sessionData =
-      await this.collaborationSessionService.getSession(sessionId);
+    const sessionData = await this.collaborationSessionService.getSession(sessionId);
 
     // figure out who else is online in that session
-    const onlineUserSessions = sessionData.userCollaborationSessions.filter(
-      (ucs) => {
-        const onlineData = this.sessionState.onlineUsers.get(ucs.user.id);
-        return onlineData && onlineData.sessionId === sessionId;
-      },
-    );
+    const onlineUserSessions = sessionData.userCollaborationSessions.filter((ucs) => {
+      const onlineData = this.sessionState.onlineUsers.get(ucs.user.id);
+
+      return onlineData && onlineData.sessionId === sessionId;
+    });
 
     const onlineCollaborators = onlineUserSessions.map((ucs) => ({
       id: ucs.user.id,
@@ -222,29 +206,25 @@ export class CollaborationSessionGateway
     }));
 
     this.server.to(`session_${sessionId}`).emit('sessionData', {
-      session: sessionData,
+      sessionData,
       users: onlineCollaborators,
     });
 
-    this.logger.log(
-      `Client ${client.id} (User ${userId}) joined session ${sessionId}`,
-    );
+    this.logger.log(`Client ${client.id} (User ${userId}) joined session ${sessionId}`);
   }
 
   @SubscribeMessage('leaveSession')
   async handleLeaveSession(@ConnectedSocket() client: Socket) {
     const sessionId = this.sessionState.socketSessionMap.get(client.id);
     const userId = client.data.userId;
+
     client.leave(`session_${sessionId}`);
     client.to(`session_${sessionId}`).emit('userLeft', { userId });
   }
 
   @SubscribeMessage('deleteSession')
   @Roles(Permission.EDIT)
-  async handleDeleteSession(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { sessionId: number },
-  ) {
+  async handleDeleteSession(@ConnectedSocket() client: Socket, @MessageBody() data: { sessionId: number }) {
     try {
       const { sessionId } = data;
       const userId = client.data.userId;
@@ -268,42 +248,34 @@ export class CollaborationSessionGateway
   //                            CHAT (MESSAGES)
   // ---------------------------------------------------------------------------
   @SubscribeMessage('sendMessage')
-  async handleSendMessage(
-    @MessageBody('message') messageText: string,
-    @ConnectedSocket() client: Socket,
-  ) {
+  async handleSendMessage(@MessageBody('message') messageText: string, @ConnectedSocket() client: Socket) {
     const sessionId = this.sessionState.socketSessionMap.get(client.id);
     const userId = client.data.userId;
-    const collaborationSession =
-      await this.collaborationSessionService.findById(sessionId);
+    const collaborationSession = await this.collaborationSessionService.findById(sessionId);
 
     if (!collaborationSession) {
       throw new Error('Collaboration session not found');
     }
 
     const sender = { id: userId };
-    const message = await this.messagesService.createMessage(
-      sender as User,
-      collaborationSession.id,
-      messageText,
-    );
+    const message = await this.messagesService.createMessage(sender as User, collaborationSession.id, messageText);
 
     this.server.to(`session_${sessionId}`).emit('newMessage', message);
+
     return message;
   }
 
   @SubscribeMessage('getMessages')
   async handleGetMessages(@ConnectedSocket() client: Socket) {
     const sessionId = this.sessionState.socketSessionMap.get(client.id);
-    const collaborationSession =
-      await this.collaborationSessionService.findById(sessionId);
+    const collaborationSession = await this.collaborationSessionService.findById(sessionId);
 
     if (!collaborationSession) {
       throw new Error('Collaboration session not found');
     }
 
-    const messages =
-      await this.messagesService.getMessagesForSession(collaborationSession);
+    const messages = await this.messagesService.getMessagesForSession(collaborationSession);
+
     client.emit('messages', messages);
   }
 
@@ -318,29 +290,25 @@ export class CollaborationSessionGateway
     { userId, permission }: { userId: number; permission: Permission },
   ) {
     const sessionId = this.sessionState.socketSessionMap.get(client.id);
+
     if (!sessionId) {
       client.emit('error', 'Session not found');
+
       return;
     }
 
-    const userSession =
-      await this.userCollaborationSessionService.findByUserAndSession(
-        userId,
-        sessionId,
-      );
+    const userSession = await this.userCollaborationSessionService.findByUserAndSession(userId, sessionId);
 
     // By default, at least READ
     let newPermissions: Permission[] = [Permission.READ];
+
     if (permission === Permission.EDIT) {
       newPermissions.push(Permission.EDIT);
     } else if (permission === Permission.ADMIN) {
       newPermissions.push(Permission.EDIT, Permission.ADMIN);
     }
 
-    await this.userCollaborationSessionService.updatePermissions(
-      userSession.id,
-      newPermissions,
-    );
+    await this.userCollaborationSessionService.updatePermissions(userSession.id, newPermissions);
 
     this.server.to(`session_${sessionId}`).emit('permissionsChanged', {
       userId,
@@ -357,30 +325,28 @@ export class CollaborationSessionGateway
   ) {
     const userId = client.data.userId;
     const sessionId = this.sessionState.socketSessionMap.get(client.id);
+
     if (!sessionId) {
       client.emit('error', 'Session not found');
+
       return;
     }
 
     if (!userId) {
       client.emit('error', 'User not authenticated');
+
       return;
     }
 
-    await this.collaborationSessionService.updateSessionName(
-      sessionId,
-      newName,
-    );
+    await this.collaborationSessionService.updateSessionName(sessionId, newName);
 
-    const sessionData =
-      await this.collaborationSessionService.getSession(sessionId);
+    const sessionData = await this.collaborationSessionService.getSession(sessionId);
 
-    const onlineUserSessions = sessionData.userCollaborationSessions.filter(
-      (ucs) => {
-        const onlineData = this.sessionState.onlineUsers.get(ucs.user.id);
-        return onlineData && onlineData.sessionId === sessionId;
-      },
-    );
+    const onlineUserSessions = sessionData.userCollaborationSessions.filter((ucs) => {
+      const onlineData = this.sessionState.onlineUsers.get(ucs.user.id);
+
+      return onlineData && onlineData.sessionId === sessionId;
+    });
 
     const onlineCollaborators = onlineUserSessions.map((ucs) => ({
       id: ucs.user.id,
@@ -391,12 +357,10 @@ export class CollaborationSessionGateway
     }));
 
     this.server.to(`session_${sessionId}`).emit('sessionData', {
-      session: sessionData,
+      sessionData,
       users: onlineCollaborators,
     });
 
-    this.logger.log(
-      `User ${userId} changed session ${sessionId} name to '${newName}'`,
-    );
+    this.logger.log(`User ${userId} changed session ${sessionId} name to '${newName}'`);
   }
 }

@@ -2,13 +2,7 @@ import { Document } from 'src/document/document.model';
 import { Invitation } from 'src/invitation/invitation.model';
 import { Message } from 'src/messages/messages.model';
 import { UserCollaborationSession } from 'src/user-collaboration-session/user-collaboration-session.model';
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  OneToMany,
-  CreateDateColumn,
-  Column,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, OneToMany, CreateDateColumn, Column } from 'typeorm';
 
 @Entity('collaboration_sessions')
 export class CollaborationSession {
@@ -23,10 +17,7 @@ export class CollaborationSession {
   })
   documents: Document[];
 
-  @OneToMany(
-    () => UserCollaborationSession,
-    (userSession) => userSession.session,
-  )
+  @OneToMany(() => UserCollaborationSession, (userSession) => userSession.session)
   userCollaborationSessions: UserCollaborationSession[];
 
   @OneToMany(() => Invitation, (invitation) => invitation.session, {

@@ -1,19 +1,11 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  Invitation,
-  InvitationStatus,
-  NotificationStatus,
-} from './invitation.model';
+import { Invitation } from './invitation.model';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { UpdateInvitationDto } from './dto/update-invitation.dto';
-import { Permission } from 'src/user-collaboration-session/user-collaboration-session.model';
 import { UserCollaborationSessionService } from 'src/user-collaboration-session/user-collaboration-session.service';
+import { InvitationStatus, NotificationStatus, Permission } from 'src/common/enums/enums';
 
 @Injectable()
 export class InvitationService {
@@ -25,13 +17,11 @@ export class InvitationService {
 
   async create(createInvitationDto: CreateInvitationDto): Promise<Invitation> {
     const invitation = this.invitationRepository.create(createInvitationDto);
+
     return await this.invitationRepository.save(invitation);
   }
 
-  async update(
-    id: number,
-    updateInvitationDto: UpdateInvitationDto,
-  ): Promise<Invitation> {
+  async update(id: number, updateInvitationDto: UpdateInvitationDto): Promise<Invitation> {
     const invitation = await this.invitationRepository.findOne({
       where: { id },
     });
@@ -90,10 +80,7 @@ export class InvitationService {
     invitation.invitationStatus = InvitationStatus.ACCEPTED;
     invitation.notificationStatus = NotificationStatus.READ;
 
-    const permissions =
-      invitation.role === Permission.EDIT
-        ? [Permission.READ, Permission.EDIT]
-        : [Permission.READ];
+    const permissions = invitation.role === Permission.EDIT ? [Permission.READ, Permission.EDIT] : [Permission.READ];
 
     await this.userCollaborationSessionService.createSession(
       invitation.receiver.id,
@@ -112,31 +99,21 @@ export class InvitationService {
     });
   }
 
-  async findByReceiverAndSession(
-    receiverId: number,
-    sessionId: number,
-  ): Promise<Invitation | null> {
+  async findByReceiverAndSession(receiverId: number, sessionId: number): Promise<Invitation | null> {
     return await this.invitationRepository.findOne({
       where: { receiver: { id: receiverId }, session: { id: sessionId } },
     });
   }
 
-  async changeInvitationRole(
-    invitationId: number,
-    newRole: Permission,
-  ): Promise<Invitation> {
+  async changeInvitationRole(invitationId: number, newRole: Permission): Promise<Invitation> {
     if (![Permission.READ, Permission.EDIT].includes(newRole)) {
-      throw new ForbiddenException(
-        `Role can only be changed to ${Permission.READ} or ${Permission.EDIT}`,
-      );
+      throw new ForbiddenException(`Role can only be changed to ${Permission.READ} or ${Permission.EDIT}`);
     }
 
     const invitation = await this.findById(invitationId);
 
     if (!invitation) {
-      throw new NotFoundException(
-        `Invitation with id ${invitationId} not found`,
-      );
+      throw new NotFoundException(`Invitation with id ${invitationId} not found`);
     }
 
     invitation.role = newRole;
