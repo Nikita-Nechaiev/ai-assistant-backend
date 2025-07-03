@@ -1,11 +1,11 @@
 import {
-  WebSocketGateway,
-  SubscribeMessage,
-  MessageBody,
   ConnectedSocket,
-  OnGatewayInit,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
+  SubscribeMessage,
+  WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
@@ -13,354 +13,194 @@ import { Logger, UnauthorizedException } from '@nestjs/common';
 import { parse } from 'cookie';
 import { verify } from 'jsonwebtoken';
 
-import { CollaborationSessionService } from './collaboration-session.service';
-import { UserCollaborationSessionService } from 'src/user-collaboration-session/user-collaboration-session.service';
 import { AuthService } from 'src/auth/auth.service';
 import { MessagesService } from 'src/messages/messages.service';
+import { SessionPresenceService } from 'src/collaboration-session/presence/session-presence.service';
+import { UserCollaborationSessionService } from 'src/user-collaboration-session/user-collaboration-session.service';
 
 import { Roles } from 'src/common/decorators/roles.decorator';
-import { SessionStateService } from './session-state.service'; // <-- Our shared state
-import { User } from 'src/user/user.model';
 import { Permission } from 'src/common/enums/enums';
+import { User } from 'src/user/user.model';
+import { dashboardRoom, sessionRoom } from 'src/common/utils/room.util';
+import { CollaborationSessionService } from './collaboration-session.service';
 
-/**
- * This gateway deals with:
- * 1) Socket connection/disconnection + authentication
- * 2) Joining/Leaving sessions
- * 3) Chat messages
- * 4) Session-level updates (deletion, rename)
- * 5) User permissions
- */
 @WebSocketGateway({
   path: '/collaboration-session-socket',
-  cors: {
-    origin: [process.env.FRONTEND_URL],
-    credentials: true,
-  },
+  cors: { origin: [process.env.FRONTEND_URL], credentials: true },
 })
 export class CollaborationSessionGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() private server: Server;
-  private readonly logger = new Logger('CollaborationSessionGateway');
+  private readonly logger = new Logger(CollaborationSessionGateway.name);
 
   constructor(
-    private readonly collaborationSessionService: CollaborationSessionService,
-    private readonly userCollaborationSessionService: UserCollaborationSessionService,
     private readonly authService: AuthService,
+    private readonly presence: SessionPresenceService,
     private readonly messagesService: MessagesService,
-    private readonly sessionState: SessionStateService, // inject shared state
+    private readonly userSessionService: UserCollaborationSessionService,
+    private readonly collaborationSessionService: CollaborationSessionService,
   ) {}
 
-  afterInit(server: Server) {
-    this.logger.log('WebSocket Gateway initialized at /collaboration-session-socket');
+  afterInit() {
+    this.logger.log('WebSocket gateway initialised');
   }
 
   async handleConnection(@ConnectedSocket() client: Socket) {
     try {
-      const cookiesHeader = client.handshake.headers.cookie;
+      const cookies = parse(client.handshake.headers.cookie ?? '');
+      let access = cookies['accessToken'];
+      let refresh = cookies['refreshToken'];
 
-      if (!cookiesHeader) {
-        throw new UnauthorizedException('No cookies found in request');
-      }
-
-      const cookies = parse(cookiesHeader);
-
-      let accessToken = cookies['accessToken'];
-      let refreshToken = cookies['refreshToken'];
-
-      if (!accessToken) {
-        throw new UnauthorizedException('Access token not found in cookies');
-      }
-
-      if (!refreshToken) {
-        throw new UnauthorizedException('Refresh token not found in cookies');
-      }
+      if (!access || !refresh) throw new UnauthorizedException('Missing tokens');
 
       let decoded: any;
 
       try {
-        decoded = verify(accessToken, process.env.JWT_ACCESS_SECRET);
-      } catch (error) {
-        if (error.name === 'TokenExpiredError') {
-          const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
-            await this.authService.refresh(refreshToken);
+        decoded = verify(access, process.env.JWT_ACCESS_SECRET);
+      } catch (e) {
+        if (e.name === 'TokenExpiredError') {
+          const tokens = await this.authService.refresh(refresh);
 
-          accessToken = newAccessToken;
-          refreshToken = newRefreshToken;
-          decoded = verify(accessToken, process.env.JWT_ACCESS_SECRET);
-
-          client.handshake.headers.cookie = `accessToken=${accessToken}; refreshToken=${refreshToken}`;
+          access = tokens.accessToken;
+          refresh = tokens.refreshToken;
+          decoded = verify(access, process.env.JWT_ACCESS_SECRET);
+          client.handshake.headers.cookie = `accessToken=${access}; refreshToken=${refresh}`;
         } else {
-          throw new UnauthorizedException(error.message);
+          throw new UnauthorizedException(e.message);
         }
       }
 
-      if (!decoded?.sub) {
-        throw new UnauthorizedException('Invalid token payload');
-      }
-
-      // Attach user ID to socket
       client.data.userId = Number(decoded.sub);
-
-      // Auto-join the "dashboard_userId" room
-      const roomName = `dashboard_${client.data.userId}`;
-
-      client.join(roomName);
-      this.logger.log(`User ${client.data.userId} auto-joined: ${roomName}`);
-    } catch (error) {
-      this.logger.error(`Unauthorized connection attempt: ${error.message}`);
+      client.join(dashboardRoom(client.data.userId));
+    } catch (e) {
+      this.logger.error(`Unauthorised socket: ${e.message}`);
       client.disconnect();
     }
   }
 
   async handleDisconnect(@ConnectedSocket() client: Socket) {
-    const userId = client.data.userId;
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+    const sessionId = await this.presence.leave(client.id, client.data.userId);
 
-    if (userId) {
-      const userData = this.sessionState.onlineUsers.get(userId);
-
-      if (userData) {
-        userData.socketIds.delete(client.id);
-
-        // if no more sockets for this user, update DB for time spent
-        if (userData.socketIds.size === 0) {
-          const timeSpentSeconds = (Date.now() - userData.startTime) / 1000;
-
-          const sessionExists = await this.collaborationSessionService.findById(sessionId);
-
-          if (sessionExists) {
-            await this.userCollaborationSessionService.updateTimeSpent(userId, sessionId, timeSpentSeconds);
-
-            await this.userCollaborationSessionService.updateLastInteracted(userId, sessionId, new Date());
-
-            this.logger.log(`User ${userId} spent ${timeSpentSeconds}s in the session (${sessionId}).`);
-
-            this.server.to(`session_${sessionId}`).emit('userLeft', { userId });
-          } else {
-            this.logger.warn(`Session ${sessionId} has already been deleted. Skipping updates.`);
-          }
-
-          this.sessionState.onlineUsers.delete(userId);
-        }
-      }
+    if (sessionId) {
+      this.server.to(sessionRoom(sessionId)).emit('userLeft', { userId: client.data.userId });
     }
-
-    this.sessionState.socketSessionMap.delete(client.id);
-    this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  // ---------------------------------------------------------------------------
-  //                     SESSION (JOIN, LEAVE, DELETE, ETC.)
-  // ---------------------------------------------------------------------------
   @SubscribeMessage('joinSession')
-  async handleJoinSession(@MessageBody('sessionId') sessionId: number, @ConnectedSocket() client: Socket) {
-    const userId = client.data.userId;
+  async joinSession(@MessageBody('sessionId') sessionId: number, @ConnectedSocket() client: Socket) {
+    const { isAllowed, snapshot, isFirstJoin, newUser } = await this.presence.join(client, sessionId);
 
-    this.sessionState.socketSessionMap.set(client.id, sessionId);
-
-    const userSession = await this.userCollaborationSessionService.findByUserAndSession(userId, sessionId);
-
-    if (!userSession) {
-      client.emit('invalidSession', {
-        message: 'You do not have permission to access this page',
-      });
+    if (!isAllowed) {
+      client.emit('invalidSession', { message: 'You do not have permission to access this page' });
 
       return;
     }
 
-    const timeSpent = Number(userSession.timeSpent);
-    const existingData = this.sessionState.onlineUsers.get(userId);
+    client.join(sessionRoom(sessionId));
 
-    if (!existingData) {
-      this.sessionState.onlineUsers.set(userId, {
-        sessionId,
-        startTime: Date.now(),
-        socketIds: new Set([client.id]),
-      });
-      client.emit('currentTime', { totalTime: timeSpent });
-    } else {
-      const partialSeconds = (Date.now() - existingData.startTime) / 1000;
-      const currentTime = timeSpent + partialSeconds;
+    client.emit('totalSessionData', snapshot);
 
-      existingData.socketIds.add(client.id);
-      client.emit('currentTime', { totalTime: currentTime });
+    if (isFirstJoin) {
+      client.to(sessionRoom(sessionId)).emit('newOnlineUser', newUser);
+    }
+  }
+
+  @SubscribeMessage('getSessionData')
+  async getTotalSessionData(@MessageBody('sessionId') reqId: number | undefined, @ConnectedSocket() client: Socket) {
+    const sessionId = reqId ?? this.presence.getSessionIdBySocket(client.id);
+
+    if (!sessionId) {
+      return;
     }
 
-    client.join(`session_${sessionId}`);
+    const snapshot = await this.presence.getSessionTotalData(client, sessionId);
 
-    const sessionData = await this.collaborationSessionService.getSession(sessionId);
-
-    // figure out who else is online in that session
-    const onlineUserSessions = sessionData.userCollaborationSessions.filter((ucs) => {
-      const onlineData = this.sessionState.onlineUsers.get(ucs.user.id);
-
-      return onlineData && onlineData.sessionId === sessionId;
-    });
-
-    const onlineCollaborators = onlineUserSessions.map((ucs) => ({
-      id: ucs.user.id,
-      name: ucs.user.name,
-      email: ucs.user.email,
-      avatar: ucs.user.avatar,
-      permissions: ucs.permissions,
-    }));
-
-    this.server.to(`session_${sessionId}`).emit('sessionData', {
-      sessionData,
-      users: onlineCollaborators,
-    });
-
-    this.logger.log(`Client ${client.id} (User ${userId}) joined session ${sessionId}`);
+    client.emit('totalSessionData', snapshot);
   }
 
   @SubscribeMessage('leaveSession')
-  async handleLeaveSession(@ConnectedSocket() client: Socket) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
-    const userId = client.data.userId;
+  async leaveSession(@ConnectedSocket() client: Socket) {
+    const sessionId = await this.presence.leave(client.id, client.data.userId);
 
-    client.leave(`session_${sessionId}`);
-    client.to(`session_${sessionId}`).emit('userLeft', { userId });
+    if (sessionId) {
+      client.leave(sessionRoom(sessionId));
+      client.to(sessionRoom(sessionId)).emit('userLeft', { userId: client.data.userId });
+    }
   }
 
   @SubscribeMessage('deleteSession')
-  @Roles(Permission.EDIT)
-  async handleDeleteSession(@ConnectedSocket() client: Socket, @MessageBody() data: { sessionId: number }) {
-    try {
-      const { sessionId } = data;
-      const userId = client.data.userId;
+  @Roles(Permission.ADMIN)
+  async deleteSession(@ConnectedSocket() client: Socket, @MessageBody('sessionId') sessionId: number) {
+    await this.collaborationSessionService.deleteSession(sessionId);
 
-      await this.collaborationSessionService.deleteSession(sessionId);
+    await this.presence.leave(client.id, client.data.userId);
 
-      this.server.to(`session_${sessionId}`).emit('sessionDeleted', {
-        sessionId,
-        message: 'This session has been deleted by the admin',
-        userId,
-      });
+    this.server.to(sessionRoom(sessionId)).emit('sessionDeleted', {
+      sessionId,
+      message: 'This session has been deleted by the admin',
+      userId: client.data.userId,
+    });
 
-      this.server.socketsLeave(`session_${sessionId}`);
-    } catch (error) {
-      this.logger.error(`Failed to delete session: ${error.message}`);
-      client.emit('error', 'Failed to delete session');
-    }
+    this.server.socketsLeave(sessionRoom(sessionId));
   }
 
-  // ---------------------------------------------------------------------------
-  //                            CHAT (MESSAGES)
-  // ---------------------------------------------------------------------------
   @SubscribeMessage('sendMessage')
-  async handleSendMessage(@MessageBody('message') messageText: string, @ConnectedSocket() client: Socket) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
-    const userId = client.data.userId;
-    const collaborationSession = await this.collaborationSessionService.findById(sessionId);
+  async sendMessage(@MessageBody('message') text: string, @ConnectedSocket() client: Socket) {
+    const sessionId = this.presence.getSessionIdBySocket(client.id);
 
-    if (!collaborationSession) {
-      throw new Error('Collaboration session not found');
-    }
+    if (!sessionId) return;
 
-    const sender = { id: userId };
-    const message = await this.messagesService.createMessage(sender as User, collaborationSession.id, messageText);
+    const message = await this.messagesService.createMessage({ id: client.data.userId } as User, sessionId, text);
 
-    this.server.to(`session_${sessionId}`).emit('newMessage', message);
-
-    return message;
+    this.server.to(sessionRoom(sessionId)).emit('newMessage', message);
   }
 
   @SubscribeMessage('getMessages')
-  async handleGetMessages(@ConnectedSocket() client: Socket) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
-    const collaborationSession = await this.collaborationSessionService.findById(sessionId);
+  async getMessages(@ConnectedSocket() client: Socket) {
+    const sessionId = this.presence.getSessionIdBySocket(client.id);
 
-    if (!collaborationSession) {
-      throw new Error('Collaboration session not found');
-    }
+    if (!sessionId) return;
 
-    const messages = await this.messagesService.getMessagesForSession(collaborationSession);
+    const msgs = await this.messagesService.getMessagesForSession(
+      await this.collaborationSessionService.findById(sessionId),
+    );
 
-    client.emit('messages', messages);
+    client.emit('messages', msgs);
   }
 
-  // ---------------------------------------------------------------------------
-  //                       USER PERMISSIONS & SESSION NAME
-  // ---------------------------------------------------------------------------
   @SubscribeMessage('changeUserPermissions')
   @Roles(Permission.ADMIN)
-  async changeUserPermissions(
+  async changePermissions(
     @ConnectedSocket() client: Socket,
-    @MessageBody()
-    { userId, permission }: { userId: number; permission: Permission },
+    @MessageBody() { userId, permission }: { userId: number; permission: Permission },
   ) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+    const sessionId = this.presence.getSessionIdBySocket(client.id);
 
-    if (!sessionId) {
-      client.emit('error', 'Session not found');
+    if (!sessionId) return;
 
-      return;
-    }
+    const userSession = await this.userSessionService.findByUserAndSession(userId, sessionId);
 
-    const userSession = await this.userCollaborationSessionService.findByUserAndSession(userId, sessionId);
+    const list: Permission[] =
+      permission === Permission.ADMIN
+        ? [Permission.READ, Permission.EDIT, Permission.ADMIN]
+        : permission === Permission.EDIT
+          ? [Permission.READ, Permission.EDIT]
+          : [Permission.READ];
 
-    // By default, at least READ
-    let newPermissions: Permission[] = [Permission.READ];
-
-    if (permission === Permission.EDIT) {
-      newPermissions.push(Permission.EDIT);
-    } else if (permission === Permission.ADMIN) {
-      newPermissions.push(Permission.EDIT, Permission.ADMIN);
-    }
-
-    await this.userCollaborationSessionService.updatePermissions(userSession.id, newPermissions);
-
-    this.server.to(`session_${sessionId}`).emit('permissionsChanged', {
-      userId,
-      permissions: newPermissions,
-    });
+    await this.userSessionService.updatePermissions(userSession.id, list);
+    this.server.to(sessionRoom(sessionId)).emit('permissionsChanged', { userId, permissions: list });
   }
 
   @SubscribeMessage('updateSessionName')
   @Roles(Permission.ADMIN)
-  async handleUpdateSessionName(
-    @MessageBody()
-    { newName }: { newName: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const userId = client.data.userId;
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+  async renameSession(@MessageBody('newName') name: string, @ConnectedSocket() client: Socket) {
+    const sessionId = this.presence.getSessionIdBySocket(client.id);
 
-    if (!sessionId) {
-      client.emit('error', 'Session not found');
+    if (!sessionId) return;
 
-      return;
-    }
+    await this.collaborationSessionService.updateSessionName(sessionId, name);
 
-    if (!userId) {
-      client.emit('error', 'User not authenticated');
+    const sessionData = await this.presence.getSessionData(sessionId);
 
-      return;
-    }
-
-    await this.collaborationSessionService.updateSessionName(sessionId, newName);
-
-    const sessionData = await this.collaborationSessionService.getSession(sessionId);
-
-    const onlineUserSessions = sessionData.userCollaborationSessions.filter((ucs) => {
-      const onlineData = this.sessionState.onlineUsers.get(ucs.user.id);
-
-      return onlineData && onlineData.sessionId === sessionId;
-    });
-
-    const onlineCollaborators = onlineUserSessions.map((ucs) => ({
-      id: ucs.user.id,
-      name: ucs.user.name,
-      email: ucs.user.email,
-      avatar: ucs.user.avatar,
-      permissions: ucs.permissions,
-    }));
-
-    this.server.to(`session_${sessionId}`).emit('sessionData', {
-      sessionData,
-      users: onlineCollaborators,
-    });
-
-    this.logger.log(`User ${userId} changed session ${sessionId} name to '${newName}'`);
+    this.server.to(sessionRoom(sessionId)).emit('sessionData', sessionData);
   }
 }

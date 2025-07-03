@@ -5,6 +5,7 @@ import { AiToolUsage } from './ai-tool-usage.model';
 import { User } from 'src/user/user.model';
 import { Document } from 'src/document/document.model';
 import OpenAI from 'openai';
+import { AiTool } from 'src/common/enums/enums';
 
 @Injectable()
 export class AiToolUsageService {
@@ -116,14 +117,14 @@ export class AiToolUsageService {
   }
 
   async checkGrammar(userId: number, text: string, documentId?: number) {
-    return this.processAiTool('Grammar Checker', userId, text, documentId, {
+    return this.processAiTool(AiTool.GRAMMAR_CHECK, userId, text, documentId, {
       role: 'system',
       content: `You are a grammar checker. Give back only the corrected text`,
     });
   }
 
   async analyzeTone(userId: number, text: string, documentId?: number) {
-    return this.processAiTool('Tone Analyzer', userId, text, documentId, {
+    return this.processAiTool(AiTool.TONE_ANALYSIS, userId, text, documentId, {
       role: 'system',
       content: `You MUST NOT write the text again. Give the tone rate in format ... of 100 where 1 is an informal text with a couple mistakes and 100 is a well-written formal text without mistakes.
           Also, shortly tell what is wrong with the text. You MUST NOT correct these mistakes.`,
@@ -131,42 +132,42 @@ export class AiToolUsageService {
   }
 
   async summarizeText(userId: number, text: string, documentId?: number) {
-    return this.processAiTool('Summarization', userId, text, documentId, {
+    return this.processAiTool(AiTool.SUMMARIZATION, userId, text, documentId, {
       role: 'system',
       content: 'You are a text summarizer. In 2-4 sentences paraphrase the text',
     });
   }
 
   async rephraseText(userId: number, text: string, documentId?: number) {
-    return this.processAiTool('Rephrasing', userId, text, documentId, {
+    return this.processAiTool(AiTool.REPHRASE, userId, text, documentId, {
       role: 'system',
       content: 'You are a text simplifier. Rephrase and simplify the following text.',
     });
   }
 
   async translateText(userId: number, text: string, targetLanguage: string, documentId?: number) {
-    return this.processAiTool('Translation', userId, text, documentId, {
+    return this.processAiTool(AiTool.TRANSLATION, userId, text, documentId, {
       role: 'system',
       content: `Translate the following text to ${targetLanguage}.`,
     });
   }
 
   async extractKeywords(userId: number, text: string, documentId?: number) {
-    return this.processAiTool('Keyword Extraction', userId, text, documentId, {
+    return this.processAiTool(AiTool.KEYWORD_EXTRACTION, userId, text, documentId, {
       role: 'system',
       content: 'Extract the key words and phrases from the following text. Do not write too much text',
     });
   }
 
   async generateText(userId: number, text: string, documentId?: number) {
-    return this.processAiTool('Text Generation', userId, text, documentId, {
+    return this.processAiTool(AiTool.TEXT_GENERATION, userId, text, documentId, {
       role: 'system',
       content: 'Generate text based on the following prompt.',
     });
   }
 
   async analyzeReadability(userId: number, text: string, documentId?: number) {
-    return this.processAiTool('Readability Analysis', userId, text, documentId, {
+    return this.processAiTool(AiTool.READABILITY, userId, text, documentId, {
       role: 'system',
       content: `You MUST NOT write the text again.
           Give the rate in format ... of 100 where 1 is a text that is read difficult and 100 is a text that can be read very easily .
@@ -175,14 +176,14 @@ export class AiToolUsageService {
   }
 
   async generateTitle(userId: number, text: string, documentId?: number) {
-    return this.processAiTool('Title Generation', userId, text, documentId, {
+    return this.processAiTool(AiTool.TITLE_GENERATION, userId, text, documentId, {
       role: 'system',
       content: 'Generate a title for the following text. Maximum 5 words',
     });
   }
 
   private async processAiTool(
-    toolName: string,
+    toolName: AiTool,
     userId: number,
     text: string,
     documentId: number | undefined,

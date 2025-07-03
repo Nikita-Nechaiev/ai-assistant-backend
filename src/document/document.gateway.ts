@@ -1,193 +1,162 @@
 import { WebSocketGateway, SubscribeMessage, MessageBody, ConnectedSocket, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
-
 import { DocumentService } from 'src/document/document.service';
 import { UsersService } from 'src/user/users.service';
-import { AiToolUsageService } from 'src/ai-tool-usage/ai-tool-usage.service';
 import { VersionService } from 'src/version/version.service';
-
+import { AiToolFacadeService } from 'src/document/utils/ai-tool-facade.service';
 import { Roles } from 'src/common/decorators/roles.decorator';
-import { SessionStateService } from 'src/collaboration-session/session-state.service';
-import { Permission } from 'src/common/enums/enums';
+import { AiTool, Permission } from 'src/common/enums/enums';
+import { sessionRoom } from 'src/common/utils/room.util';
+import { SessionContextService } from 'src/common/utils/session-context.service';
 
 @WebSocketGateway({
   path: '/collaboration-session-socket',
-  cors: {
-    origin: [process.env.FRONTEND_URL],
-    credentials: true,
-  },
+  cors: { origin: [process.env.FRONTEND_URL], credentials: true },
 })
 export class DocumentGateway {
   @WebSocketServer() private server: Server;
-  private readonly logger = new Logger('DocumentGateway');
-
   constructor(
     private readonly documentService: DocumentService,
-    private readonly userService: UsersService,
-    private readonly aiToolUsageService: AiToolUsageService,
+    private readonly usersService: UsersService,
     private readonly versionService: VersionService,
-    private readonly sessionState: SessionStateService,
+    private readonly sessionContextService: SessionContextService,
+    private readonly aiToolFacadeService: AiToolFacadeService,
   ) {}
+
+  private emitToSession(sessionId: number, event: string, payload: any) {
+    this.server.to(sessionRoom(sessionId)).emit(event, payload);
+  }
 
   @SubscribeMessage('changeDocumentTitle')
   @Roles(Permission.EDIT)
-  async handleChangeDocumentTitle(
+  async changeDocumentTitle(
     @MessageBody() data: { documentId: number; newTitle: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+    try {
+      const sessionId = this.sessionContextService.getSessionIdOrThrow(client);
+      const updatedDocument = await this.documentService.changeDocumentTitle(data.documentId, data.newTitle);
 
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
+      this.emitToSession(sessionId, 'documentUpdated', updatedDocument);
+    } catch (error) {
+      client.emit('error', error.message);
     }
-
-    const updatedDocument = await this.documentService.changeDocumentTitle(data.documentId, data.newTitle);
-
-    this.server.to(`session_${sessionId}`).emit('documentUpdated', updatedDocument);
   }
 
   @SubscribeMessage('createDocument')
   @Roles(Permission.EDIT)
-  async handleCreateDocument(@MessageBody() data: { title: string }, @ConnectedSocket() client: Socket) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+  async createDocument(@MessageBody() data: { title: string }, @ConnectedSocket() client: Socket) {
+    try {
+      const sessionId = this.sessionContextService.getSessionIdOrThrow(client);
+      const user = await this.usersService.findById(client.data.userId);
+      const { document: newDocument, version } = await this.documentService.createDocument(
+        sessionId,
+        user.email,
+        data.title,
+      );
 
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
+      this.emitToSession(sessionId, 'documentCreated', newDocument);
+      this.emitToSession(sessionId, 'versionCreated', version);
+    } catch (error) {
+      client.emit('error', error.message);
     }
-
-    const user = await this.userService.findById(client.data.userId);
-    const { document: newDocument, version } = await this.documentService.createDocument(
-      sessionId,
-      user.email,
-      data.title,
-    );
-
-    this.server.to(`session_${sessionId}`).emit('documentCreated', newDocument);
-    this.server.to(`session_${sessionId}`).emit('versionCreated', version);
   }
 
   @SubscribeMessage('deleteDocument')
   @Roles(Permission.EDIT)
-  async handleDeleteDocument(@MessageBody() data: { documentId: number }, @ConnectedSocket() client: Socket) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+  async deleteDocument(@MessageBody() data: { documentId: number }, @ConnectedSocket() client: Socket) {
+    try {
+      const sessionId = this.sessionContextService.getSessionIdOrThrow(client);
 
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
+      await this.documentService.deleteDocument(data.documentId);
+      this.emitToSession(sessionId, 'documentDeleted', { documentId: data.documentId });
+    } catch (error) {
+      client.emit('error', error.message);
     }
-
-    await this.documentService.deleteDocument(data.documentId);
-
-    this.server.to(`session_${sessionId}`).emit('documentDeleted', { documentId: data.documentId });
   }
 
   @SubscribeMessage('duplicateDocument')
   @Roles(Permission.EDIT)
-  async handleDuplicateDocument(@MessageBody() data: { documentId: number }, @ConnectedSocket() client: Socket) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+  async duplicateDocument(@MessageBody() data: { documentId: number }, @ConnectedSocket() client: Socket) {
+    try {
+      const sessionId = this.sessionContextService.getSessionIdOrThrow(client);
+      const user = await this.usersService.findById(client.data.userId);
+      const { document: duplicate, version } = await this.documentService.duplicateDocument(
+        data.documentId,
+        user.email,
+      );
 
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
+      this.emitToSession(sessionId, 'documentDuplicated', duplicate);
+      this.emitToSession(sessionId, 'versionCreated', version);
+    } catch (error) {
+      client.emit('error', error.message);
     }
-
-    const user = await this.userService.findById(client.data.userId);
-    const { document: duplicate, version } = await this.documentService.duplicateDocument(data.documentId, user.email);
-
-    this.server.to(`session_${sessionId}`).emit('documentDuplicated', duplicate);
-    this.server.to(`session_${sessionId}`).emit('versionCreated', version);
   }
 
   @SubscribeMessage('getSessionDocuments')
-  async handleGetSessionDocuments(@ConnectedSocket() client: Socket) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+  async getSessionDocuments(@MessageBody('sessionId') sessionId: number, @ConnectedSocket() client: Socket) {
+    try {
+      const documents = await this.documentService.getSessionDocuments(sessionId);
 
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
+      client.emit('sessionDocuments', documents);
+    } catch (error) {
+      client.emit('error', error.message);
     }
-
-    const documents = await this.documentService.getSessionDocuments(sessionId);
-
-    client.emit('sessionDocuments', documents);
   }
 
   @SubscribeMessage('changeContentAndSaveDocument')
   @Roles(Permission.EDIT)
-  async handleChangeContentAndSaveDocument(
+  async changeContentAndSaveDocument(
     @MessageBody() data: { documentId: number; newContent: any },
     @ConnectedSocket() client: Socket,
   ) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+    try {
+      const sessionId = this.sessionContextService.getSessionIdOrThrow(client);
+      const user = await this.usersService.findById(client.data.userId);
+      const { document: updatedDocument, version } = await this.documentService.changeContentAndSaveDocument(
+        data.documentId,
+        data.newContent,
+        user.email,
+      );
 
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
+      this.emitToSession(sessionId, 'documentUpdated', updatedDocument);
+      this.emitToSession(sessionId, 'versionCreated', version);
+    } catch (error) {
+      client.emit('error', error.message);
     }
-
-    const user = await this.userService.findById(client.data.userId);
-    const { document: updatedDocument, version } = await this.documentService.changeContentAndSaveDocument(
-      data.documentId,
-      data.newContent,
-      user.email,
-    );
-
-    this.server.to(`session_${sessionId}`).emit('documentUpdated', updatedDocument);
-    this.server.to(`session_${sessionId}`).emit('versionCreated', version);
   }
 
   @SubscribeMessage('applyVersion')
   @Roles(Permission.EDIT)
-  async handleApplyVersion(
+  async applyVersion(
     @MessageBody() data: { documentId: number; versionId: number },
     @ConnectedSocket() client: Socket,
   ) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+    try {
+      const sessionId = this.sessionContextService.getSessionIdOrThrow(client);
+      const user = await this.usersService.findById(client.data.userId);
+      const { document: updatedDocument, version } = await this.documentService.applyVersion(
+        data.documentId,
+        data.versionId,
+        user.email,
+      );
 
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
+      this.emitToSession(sessionId, 'documentUpdated', updatedDocument);
+      this.emitToSession(sessionId, 'versionCreated', version);
+    } catch (error) {
+      client.emit('error', error.message);
     }
-
-    const user = await this.userService.findById(client.data.userId);
-    const { document: updatedDocument, version } = await this.documentService.applyVersion(
-      data.documentId,
-      data.versionId,
-      user.email,
-    );
-
-    this.server.to(`session_${sessionId}`).emit('documentUpdated', updatedDocument);
-    this.server.to(`session_${sessionId}`).emit('versionCreated', version);
   }
 
   @SubscribeMessage('getDocument')
-  async handleGetDocument(@MessageBody() data: { documentId: number }, @ConnectedSocket() client: Socket) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
-
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
-    }
-
+  async getDocument(@MessageBody() data: { documentId: number }, @ConnectedSocket() client: Socket) {
     try {
+      const sessionId = this.sessionContextService.getSessionIdOrThrow(client);
       const updatedDocument = await this.documentService.updateLastUpdated(data.documentId);
 
       if (!updatedDocument) {
-        client.emit('invalidDocument', {
-          message: 'Document not found',
-          documentId: data.documentId,
-        });
+        client.emit('invalidDocument', { message: 'Document not found', documentId: data.documentId });
 
         return;
       }
@@ -204,108 +173,51 @@ export class DocumentGateway {
       client.emit('documentData', updatedDocument);
       client.emit('lastEditedDocument', updatedDocument);
     } catch (error) {
-      this.logger.error('Error updating document:', error);
-      client.emit('invalidDocument', {
-        message: 'Invalid document page',
-        documentId: data.documentId,
-      });
+      client.emit('invalidDocument', { message: error.message, documentId: data.documentId });
     }
   }
 
   @SubscribeMessage('getDocumentAiUsage')
   @Roles(Permission.EDIT)
-  async handleGetDocumentAiUsage(@MessageBody() data: { documentId: number }, @ConnectedSocket() client: Socket) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+  async getDocumentAiUsage(@MessageBody() data: { documentId: number }, @ConnectedSocket() client: Socket) {
+    try {
+      const sessionId = this.sessionContextService.getSessionIdOrThrow(client);
+      const usage = await this.aiToolFacadeService.executeTool(client.data.userId, {
+        toolName: AiTool.USAGE,
+        text: '',
+        documentId: data.documentId,
+      });
 
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
+      this.emitToSession(sessionId, 'documentAiUsage', usage);
+    } catch (error) {
+      client.emit('error', error.message);
     }
-
-    const usage = await this.aiToolUsageService.getUsageByDocument(data.documentId);
-
-    this.server.to(`session_${sessionId}`).emit('documentAiUsage', usage);
   }
 
   @SubscribeMessage('createDocumentAiUsage')
-  async handleCreateDocumentAiUsage(
-    @MessageBody()
-    data: {
-      toolName: string;
-      text: string;
-      documentId: number;
-      targetLanguage?: string;
-    },
+  async createDocumentAiUsage(
+    @MessageBody() data: { toolName: AiTool; text: string; documentId: number; targetLanguage?: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+    try {
+      const sessionId = this.sessionContextService.getSessionIdOrThrow(client);
+      const usage = await this.aiToolFacadeService.executeTool(client.data.userId, data);
 
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
+      this.emitToSession(sessionId, 'documentAiUsageCreated', usage);
+    } catch (error) {
+      client.emit('error', error.message);
     }
-
-    const user = await this.userService.findById(client.data.userId);
-    let usage;
-
-    switch (data.toolName) {
-      case 'grammar-check':
-        usage = await this.aiToolUsageService.checkGrammar(user.id, data.text, data.documentId);
-        break;
-      case 'tone-analysis':
-        usage = await this.aiToolUsageService.analyzeTone(user.id, data.text, data.documentId);
-        break;
-      case 'summarization':
-        usage = await this.aiToolUsageService.summarizeText(user.id, data.text, data.documentId);
-        break;
-      case 'rephrase':
-        usage = await this.aiToolUsageService.rephraseText(user.id, data.text, data.documentId);
-        break;
-      case 'translation':
-        if (!data.targetLanguage) {
-          client.emit('error', 'targetLanguage is required for Translation');
-
-          return;
-        }
-
-        usage = await this.aiToolUsageService.translateText(user.id, data.text, data.targetLanguage, data.documentId);
-        break;
-      case 'keyword-extraction':
-        usage = await this.aiToolUsageService.extractKeywords(user.id, data.text, data.documentId);
-        break;
-      case 'text-generation':
-        usage = await this.aiToolUsageService.generateText(user.id, data.text, data.documentId);
-        break;
-      case 'readability-analysis':
-        usage = await this.aiToolUsageService.analyzeReadability(user.id, data.text, data.documentId);
-        break;
-      case 'title-generation':
-        usage = await this.aiToolUsageService.generateTitle(user.id, data.text, data.documentId);
-        break;
-      default:
-        client.emit('error', 'Unsupported tool name');
-
-        return;
-    }
-
-    this.server.to(`session_${sessionId}`).emit('documentAiUsageCreated', usage);
   }
 
   @SubscribeMessage('getVersions')
   @Roles(Permission.EDIT)
-  async handleGetVersions(@MessageBody() data: { documentId: number }, @ConnectedSocket() client: Socket) {
-    const sessionId = this.sessionState.socketSessionMap.get(client.id);
+  async getVersions(@MessageBody() data: { documentId: number }, @ConnectedSocket() client: Socket) {
+    try {
+      const versions = await this.versionService.getVersionsByDocument(data.documentId);
 
-    if (!sessionId) {
-      client.emit('error', 'Session ID not found for this socket');
-
-      return;
+      client.emit('versionsData', versions);
+    } catch (error) {
+      client.emit('error', error.message);
     }
-
-    const versions = await this.versionService.getVersionsByDocument(data.documentId);
-
-    client.emit('versionsData', versions);
   }
 }

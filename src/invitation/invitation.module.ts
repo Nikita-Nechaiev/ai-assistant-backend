@@ -6,6 +6,8 @@ import { UserCollaborationSessionModule } from 'src/user-collaboration-session/u
 import { InvitationGateway } from './invitation.gateway';
 import { UsersModule } from 'src/user/users.module';
 import { CollaborationSessionModule } from 'src/collaboration-session/collaboration-session.module';
+import { CreateInvitationUseCase } from './use-cases/create-invitation.usecase';
+import { SessionContextService } from 'src/common/utils/session-context.service';
 
 @Module({
   imports: [
@@ -14,7 +16,7 @@ import { CollaborationSessionModule } from 'src/collaboration-session/collaborat
     UsersModule,
     CollaborationSessionModule,
   ],
-  providers: [InvitationService, InvitationGateway],
+  providers: [InvitationService, InvitationGateway, CreateInvitationUseCase, SessionContextService],
   exports: [InvitationService],
 })
 export class InvitationModule {}

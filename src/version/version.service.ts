@@ -12,10 +12,13 @@ export class VersionService {
   ) {}
 
   async getVersionsByDocument(documentId: number): Promise<Version[]> {
-    return this.versionRepository.find({
-      where: { document: { id: documentId } },
-      order: { createdAt: 'DESC' },
-    });
+    return this.versionRepository
+      .createQueryBuilder('version')
+      .leftJoinAndSelect('version.document', 'document')
+      .where('document.id = :documentId', { documentId })
+      .orderBy('version.createdAt', 'DESC')
+      .select(['version.id', 'version.richContent', 'version.createdAt', 'version.userEmail', 'document.id'])
+      .getMany();
   }
 
   async createVersion(document: Document, richContent: any, userEmail: string): Promise<Version | null> {
