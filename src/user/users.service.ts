@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { User } from './user.model';
 import * as bcrypt from 'bcrypt';
 import { Role } from 'src/common/enums/enums';
+import { FileService } from 'src/file/file.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly fileService: FileService,
   ) {}
 
   async findByEmail(email: string): Promise<User | null> {
@@ -17,13 +19,9 @@ export class UsersService {
   }
 
   async findById(id: number): Promise<User> {
-    const user = await this.userRepository.findOne({
-      where: { id },
-    });
+    const user = await this.userRepository.findOne({ where: { id } });
 
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
+    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
 
     return user;
   }
@@ -66,19 +64,14 @@ export class UsersService {
   }
 
   async updateResetToken(userId: number, resetToken: string, expires: number): Promise<void> {
-    await this.userRepository.update(userId, {
-      resetToken,
-      resetTokenExpires: expires,
-    });
+    await this.userRepository.update(userId, { resetToken, resetTokenExpires: expires });
   }
 
   async findByResetToken(token: string): Promise<User | null> {
     const users = await this.userRepository.find();
 
     for (const user of users) {
-      if (await bcrypt.compare(token, user.resetToken)) {
-        return user;
-      }
+      if (await bcrypt.compare(token, user.resetToken)) return user;
     }
 
     return null;
@@ -90,5 +83,22 @@ export class UsersService {
       resetToken: '',
       resetTokenExpires: null,
     });
+  }
+
+  async updateProfile(userId: number, dto: { name?: string }, avatarFile?: Express.Multer.File): Promise<User> {
+    const user = await this.findById(userId);
+
+    let avatarPath = user.avatar;
+
+    if (avatarFile) {
+      avatarPath = await this.fileService.saveAvatarFile(avatarFile);
+    }
+
+    await this.userRepository.update(userId, {
+      name: dto.name ?? user.name,
+      avatar: avatarPath,
+    });
+
+    return this.findById(userId);
   }
 }

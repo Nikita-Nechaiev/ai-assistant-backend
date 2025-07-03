@@ -23,7 +23,7 @@ export class AiToolUsageController {
 
   @Get('user/most-used-tool')
   async getMostFrequentAiTool(@Req() req: any) {
-    const userId = req.user.id; // Extract user ID from JWT payload
+    const userId = req.user.id;
     const stats = await this.aiToolUsageService.getMostFrequentAiTool(userId);
 
     return stats;

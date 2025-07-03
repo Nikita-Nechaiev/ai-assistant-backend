@@ -106,6 +106,7 @@ export class UserCollaborationSessionService {
   async findByUserAndSession(userId: number, sessionId: number): Promise<UserCollaborationSession> {
     return this.userCollabSessionRepository.findOne({
       where: { user: { id: userId }, session: { id: sessionId } },
+      relations: ['user'],
     });
   }
 }

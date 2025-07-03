@@ -18,3 +18,16 @@ export enum Permission {
   EDIT = 'edit',
   ADMIN = 'admin',
 }
+
+export enum AiTool {
+  GRAMMAR_CHECK = 'grammar-check',
+  TONE_ANALYSIS = 'tone-analysis',
+  SUMMARIZATION = 'summarization',
+  REPHRASE = 'rephrase',
+  TRANSLATION = 'translation',
+  KEYWORD_EXTRACTION = 'keyword-extraction',
+  TEXT_GENERATION = 'text-generation',
+  READABILITY = 'readability-analysis',
+  TITLE_GENERATION = 'title-generation',
+  USAGE = 'get-usage',
+}
