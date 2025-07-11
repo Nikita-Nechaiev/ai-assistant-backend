@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UsersModule } from './user/users.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
 import { AuthModule } from './auth/auth.module';
 import { DocumentModule } from './document/document.module';
 import { AiToolUsageModule } from './ai-tool-usage/ai-tool-usage.module';
@@ -12,26 +12,63 @@ import { InvitationModule } from './invitation/invitation.module';
 import { MessagesModule } from './messages/messages.module';
 import { TokenModule } from './token/token.module';
 import { FileModule } from './file/file.module';
+import { UsersModule } from './user/users.module';
 
 @Module({
-  controllers: [],
-  providers: [],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === 'development' ? '.development.env' : undefined,
+      envFilePath:
+        process.env.NODE_ENV === 'development'
+          ? '.development.env'
+          : process.env.NODE_ENV === 'test'
+            ? '.test.env'
+            : '.production.env',
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.DATABASE_URL || undefined, // Используем DATABASE_URL, если она задана
-      host: process.env.DATABASE_URL ? undefined : process.env.POSTGRES_HOST,
-      port: process.env.DATABASE_URL ? undefined : Number(process.env.POSTGRES_PORT),
-      username: process.env.DATABASE_URL ? undefined : process.env.POSTGRES_USER,
-      password: process.env.DATABASE_URL ? undefined : process.env.POSTGRES_PASSWORD,
-      database: process.env.DATABASE_URL ? undefined : process.env.POSTGRES_DB,
-      autoLoadEntities: true,
-      synchronize: true,
+
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => {
+        const isTest = cfg.get('NODE_ENV') === 'test';
+        const dbUrl = cfg.get<string>('DATABASE_URL');
+
+        if (dbUrl) {
+          return {
+            type: 'postgres',
+            url: dbUrl,
+            autoLoadEntities: true,
+            synchronize: true,
+            ssl: dbUrl.includes('amazonaws.com') ? { rejectUnauthorized: false } : false,
+          };
+        }
+
+        if (isTest) {
+          return {
+            type: 'postgres',
+            host: cfg.get('PG_HOST') ?? 'localhost',
+            port: Number(cfg.get('PG_PORT') ?? 5433),
+            username: cfg.get('PG_USER') ?? 'test',
+            password: cfg.get('PG_PASS') ?? 'test',
+            database: cfg.get('PG_DB') ?? 'myapp_test',
+            autoLoadEntities: true,
+            synchronize: true,
+            dropSchema: true,
+          };
+        }
+
+        return {
+          type: 'postgres',
+          host: cfg.get('POSTGRES_HOST') ?? 'localhost',
+          port: Number(cfg.get('POSTGRES_PORT') ?? 5432),
+          username: cfg.get('POSTGRES_USER') ?? 'postgres',
+          password: cfg.get('POSTGRES_PASSWORD') ?? 'postgres',
+          database: cfg.get('POSTGRES_DB') ?? 'myapp',
+          autoLoadEntities: true,
+          synchronize: true,
+        };
+      },
     }),
+
     UsersModule,
     AuthModule,
     DocumentModule,

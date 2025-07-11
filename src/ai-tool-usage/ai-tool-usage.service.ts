@@ -223,7 +223,7 @@ export class AiToolUsageService {
 
       return await this.aiToolUsageRepository.save(aiToolUsage);
     } catch (error) {
-      console.error(`${toolName} error:`, error.message);
+      console.log(`${toolName} error:`, error.message);
       throw new Error(`${toolName} failed.`);
     }
   }
