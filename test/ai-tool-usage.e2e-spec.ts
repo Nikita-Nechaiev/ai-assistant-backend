@@ -1,4 +1,3 @@
-// test/ai-tool-usage.e2e-spec.ts
 import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
@@ -8,24 +7,16 @@ import { AiToolUsageService } from 'src/ai-tool-usage/ai-tool-usage.service';
 import { AiTool } from 'src/common/enums/enums';
 import { AiToolUsage } from 'src/ai-tool-usage/ai-tool-usage.model';
 
-/* ------------------------------------------------------------------ */
-/*  ███  A very small in-memory stub that satisfies real types  ███    */
-/* ------------------------------------------------------------------ */
-/* single helper instance that is a *real* entity object */
 const fakeUsageRecord: AiToolUsage = Object.assign(new AiToolUsage(), {
   id: 1,
   toolName: AiTool.GRAMMAR_CHECK,
   sentText: 'teh quick brown fox',
   result: 'the quick brown fox',
   timestamp: new Date(),
-  // the entity declares these relations as optional, so
-  // leaving them undefined is fine.
 });
 
 const aiToolStub: Partial<AiToolUsageService> = {
-  /* paginated usage */
   getUsageByUser: async () => [fakeUsageRecord],
-  /* stats */
   getMostFrequentAiTool: async () => ({
     mostFrequentTool: AiTool.GRAMMAR_CHECK,
     totalUsageNumber: 7,
@@ -33,22 +24,17 @@ const aiToolStub: Partial<AiToolUsageService> = {
     mostInDayUsage: new Date('2025-01-01'),
     firstAiUsage: new Date('2024-12-31'),
   }),
-  /* one AI tool example — rest aren’t exercised in this suite */
   checkGrammar: async () => fakeUsageRecord,
 };
-
-/* ------------------------------------------------------------------ */
 
 describe('Ai-tool-usage module (e2e)', () => {
   let app: INestApplication;
   let agent: ReturnType<typeof request.agent>;
 
-  /* cookies for the signed-in user */
   let accessCookie = '';
   let refreshCookie = '';
 
   beforeAll(async () => {
-    /* bootstrap Nest and override the real provider */
     const modRef = await Test.createTestingModule({
       imports: [AppModule],
     })
@@ -66,7 +52,6 @@ describe('Ai-tool-usage module (e2e)', () => {
 
   afterAll(async () => app.close());
 
-  /* ─────────── register + login (re-use pattern) ─────────── */
   const ts = Date.now();
   const user = {
     email: `e2e_ai_${ts}@mail.com`,
@@ -100,12 +85,9 @@ describe('Ai-tool-usage module (e2e)', () => {
 
   const authCookies = () => `${accessCookie}; ${refreshCookie}`;
 
-  /* ───────────────────── tests ───────────────────── */
-
   it('GET /ai-tool-usage/user returns usage list', async () => {
     const res = await agent.get('/ai-tool-usage/user').set('Cookie', authCookies()).expect(200);
 
-    /* expect at least the core fields; ignore serialised Date, relations */
     expect(res.body).toEqual([
       expect.objectContaining({
         id: fakeUsageRecord.id,

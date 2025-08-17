@@ -1,6 +1,3 @@
-/* ------------------------------------------------------------------ */
-/* document.service.spec.ts – расширенное покрытие до 100 %           */
-/* ------------------------------------------------------------------ */
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,9 +7,6 @@ import { VersionService } from 'src/version/version.service';
 import { Version } from 'src/version/version.model';
 import { NotFoundException } from '@nestjs/common';
 
-/* ------------------------------------------------------------------ */
-/* repository mock factory                                            */
-/* ------------------------------------------------------------------ */
 const repoFactory = () => ({
   findOne: jest.fn(),
   create: jest.fn(),
@@ -21,9 +15,6 @@ const repoFactory = () => ({
   remove: jest.fn(),
 });
 
-/* ------------------------------------------------------------------ */
-/* version service mock                                               */
-/* ------------------------------------------------------------------ */
 const versionMock = {
   createVersion: jest.fn(),
   findById: jest.fn(),
@@ -48,9 +39,6 @@ describe('DocumentService', () => {
     repo = mod.get(getRepositoryToken(Document));
   });
 
-  /* -------------------------------------------------------------- */
-  /* findById()                                                     */
-  /* -------------------------------------------------------------- */
   it('returns document or throws', async () => {
     repo.findOne.mockResolvedValue({ id: 1 } as unknown as Document);
     expect(await svc.findById(1)).toEqual({ id: 1 });
@@ -59,9 +47,6 @@ describe('DocumentService', () => {
     await expect(svc.findById(2)).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  /* -------------------------------------------------------------- */
-  /* changeDocumentTitle()                                          */
-  /* -------------------------------------------------------------- */
   it('changes title when document exists', async () => {
     const doc = { id: 5, title: 'Old' } as unknown as Document;
 
@@ -79,9 +64,6 @@ describe('DocumentService', () => {
     await expect(svc.changeDocumentTitle(55, 'X')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  /* -------------------------------------------------------------- */
-  /* createDocument()                                               */
-  /* -------------------------------------------------------------- */
   it('creates document and first version', async () => {
     repo.create.mockReturnValue({} as any);
     repo.save.mockResolvedValue({ id: 7, richContent: ' ', title: 'Doc' } as unknown as Document);
@@ -98,9 +80,6 @@ describe('DocumentService', () => {
     expect(out).toEqual({ document: { id: 7, richContent: ' ', title: 'Doc' }, version: { id: 99 } });
   });
 
-  /* -------------------------------------------------------------- */
-  /* duplicateDocument()                                            */
-  /* -------------------------------------------------------------- */
   it('duplicates when original exists', async () => {
     const original = {
       id: 4,
@@ -109,7 +88,7 @@ describe('DocumentService', () => {
       collaborationSession: { id: 1 },
     } as Document;
 
-    repo.findOne.mockResolvedValueOnce(original); // original
+    repo.findOne.mockResolvedValueOnce(original);
     repo.create.mockReturnValue({} as any);
     repo.save.mockResolvedValue({
       id: 8,
@@ -133,9 +112,6 @@ describe('DocumentService', () => {
     await expect(svc.duplicateDocument(44, 'x@mail')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  /* -------------------------------------------------------------- */
-  /* changeContentAndSaveDocument()                                 */
-  /* -------------------------------------------------------------- */
   it('updates content and creates new version', async () => {
     const doc = { id: 9, richContent: 'old' } as unknown as Document;
 
@@ -155,9 +131,6 @@ describe('DocumentService', () => {
     await expect(svc.changeContentAndSaveDocument(9, 'X', 'u@mail')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  /* -------------------------------------------------------------- */
-  /* getSessionDocuments()                                          */
-  /* -------------------------------------------------------------- */
   it('gets documents by session id', async () => {
     repo.find.mockResolvedValue([{ id: 1 }] as any);
     await svc.getSessionDocuments(5);
@@ -167,9 +140,6 @@ describe('DocumentService', () => {
     });
   });
 
-  /* -------------------------------------------------------------- */
-  /* applyVersion()                                                 */
-  /* -------------------------------------------------------------- */
   it('applies version to document', async () => {
     const doc = { id: 2, richContent: 'A' } as unknown as Document;
 
@@ -211,9 +181,6 @@ describe('DocumentService', () => {
     await expect(svc.applyVersion(3, 66, 'u@mail')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  /* -------------------------------------------------------------- */
-  /* deleteDocument()                                               */
-  /* -------------------------------------------------------------- */
   it('removes document when it exists', async () => {
     repo.findOne.mockResolvedValue({ id: 12 } as Document);
     repo.remove.mockResolvedValue(undefined);
@@ -227,9 +194,6 @@ describe('DocumentService', () => {
     await expect(svc.deleteDocument(13)).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  /* -------------------------------------------------------------- */
-  /* updateLastUpdated()                                            */
-  /* -------------------------------------------------------------- */
   it('updates lastUpdated timestamp', async () => {
     const doc = { id: 14, lastUpdated: new Date('2020-01-01') } as unknown as Document;
 

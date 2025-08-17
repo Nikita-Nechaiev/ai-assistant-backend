@@ -1,7 +1,3 @@
-/* test/document.gateway.e2e-spec.ts
- * Integration tests for DocumentGateway
- * ───────────────────────────────────── */
-
 import { Test } from '@nestjs/testing';
 import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { JwtModule, JwtService } from '@nestjs/jwt';
@@ -16,8 +12,6 @@ import { VersionService } from 'src/version/version.service';
 import { SessionContextService } from 'src/common/utils/session-context.service';
 import { AiToolFacadeService } from 'src/document/utils/ai-tool-facade.service';
 import { AiTool } from 'src/common/enums/enums';
-
-/* ─────────────── stubs ─────────────── */
 
 const SESSION_ID = 7;
 
@@ -47,15 +41,11 @@ const aiFacadeStub = {
   executeTool: async () => ({ tool: AiTool.USAGE, runs: 3 }),
 } as unknown as Partial<AiToolFacadeService>;
 
-/* ───────────── JWT ───────────── */
-
 const JWT_SECRET = 'doc-gw-secret';
 
 process.env.JWT_ACCESS_SECRET = JWT_SECRET;
 
 const makeJwt = (js: JwtService, uid: number) => js.sign({ sub: uid }, { secret: JWT_SECRET, expiresIn: '1h' });
-
-/* ─────────────────────────────── */
 
 describe('DocumentGateway (websocket)', () => {
   let app: INestApplication;
@@ -87,7 +77,6 @@ describe('DocumentGateway (websocket)', () => {
     url = `http://localhost:${(server.address() as any).port}`;
     jwt = app.get(JwtService);
 
-    // broadcast-helper
     (mod.get(DocumentGateway) as any).server.to = () => (mod.get(DocumentGateway) as any).server;
   });
 
@@ -101,8 +90,6 @@ describe('DocumentGateway (websocket)', () => {
       },
       transports: ['websocket'],
     });
-
-  /* ───────── tests ───────── */
 
   it('changeDocumentTitle → documentUpdated', async () => {
     const socket = connect();

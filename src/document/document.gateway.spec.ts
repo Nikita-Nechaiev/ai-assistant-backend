@@ -6,7 +6,6 @@ import { SessionContextService } from 'src/common/utils/session-context.service'
 import { AiToolFacadeService } from 'src/document/utils/ai-tool-facade.service';
 import { AiTool } from 'src/common/enums/enums';
 
-/* helpers: fake socket & server                                      */
 function fakeSocket(id = 'sock-1', userId = 5) {
   const s: any = {
     id,
@@ -14,7 +13,7 @@ function fakeSocket(id = 'sock-1', userId = 5) {
     emit: jest.fn(),
     join: jest.fn(),
     leave: jest.fn(),
-    to: jest.fn().mockReturnThis(), // chainable: .to().emit()
+    to: jest.fn().mockReturnThis(),
   };
 
   return s;
@@ -28,7 +27,6 @@ function fakeServer() {
   return svr;
 }
 
-/* mocks for injected services                                        */
 const docMock = {
   changeDocumentTitle: jest.fn(),
   createDocument: jest.fn(),
@@ -44,7 +42,6 @@ const verMock = { getVersionsByDocument: jest.fn() };
 const ctxMock = { getSessionIdOrThrow: jest.fn() };
 const aiMock = { executeTool: jest.fn() };
 
-/* ------------------------------------------------------------------ */
 function buildGw() {
   const gw = new DocumentGateway(docMock as any, userMock as any, verMock as any, ctxMock as any, aiMock as any);
 
@@ -53,9 +50,6 @@ function buildGw() {
   return gw;
 }
 
-/* ------------------------------------------------------------------ */
-/*                                 TESTS                              */
-/* ------------------------------------------------------------------ */
 describe('DocumentGateway (unit)', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -191,10 +185,10 @@ describe('DocumentGateway (unit)', () => {
     const gw = buildGw();
     const sock = fakeSocket();
 
-    ctxMock.getSessionIdOrThrow.mockReturnValue(999); // текущая сессия
+    ctxMock.getSessionIdOrThrow.mockReturnValue(999);
     docMock.updateLastUpdated.mockResolvedValue({
       id: 55,
-      collaborationSession: { id: 777 }, // Другая сессия!
+      collaborationSession: { id: 777 },
     });
 
     await gw.getDocument({ documentId: 55 }, sock as any);
@@ -244,7 +238,6 @@ describe('DocumentGateway (unit)', () => {
     });
   });
 
-  /* getDocument → throws -> catch branch */
   it('getDocument → catches service error and emits invalidDocument', async () => {
     const gw = buildGw();
     const sock = fakeSocket();
@@ -260,7 +253,6 @@ describe('DocumentGateway (unit)', () => {
     });
   });
 
-  /* generic helper to test catch-blocks */
   const errorCases: Array<{
     name: string;
     arrange: (gw: DocumentGateway, sock: any) => Promise<void>;

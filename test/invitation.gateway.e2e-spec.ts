@@ -1,7 +1,3 @@
-/* test/invitation.gateway.e2e-spec.ts
- * Integration tests for InvitationGateway
- * ─────────────────────────────────────── */
-
 import { Test } from '@nestjs/testing';
 import { INestApplication, Logger, UnauthorizedException, ValidationPipe } from '@nestjs/common';
 import { JwtModule, JwtService } from '@nestjs/jwt';
@@ -16,8 +12,6 @@ import { SessionContextService } from 'src/common/utils/session-context.service'
 import { NotificationStatus, Permission, AiTool, InvitationStatus } from 'src/common/enums/enums';
 import { Invitation } from 'src/invitation/invitation.model';
 
-/* ─────────────── stubs ─────────────── */
-
 const SESSION_ID = 7;
 const RECEIVER_ID = 2;
 const INVITER_ID = 2;
@@ -31,20 +25,15 @@ const baseInvitation: Invitation = {
   expiresAt: null,
   inviterEmail: 'inviter@mail.com',
 
-  /* связи: достаточно указать id; остальное — `as any` */
   session: { id: SESSION_ID } as any,
   receiver: { id: RECEIVER_ID } as any,
 };
 
-/* ─────────── InvitationService stub ─────────── */
 const invitationStub: Partial<InvitationService> = {
-  /* дашборд */
   findByReceiverId: async () => [baseInvitation],
 
-  /* список по сессии */
   getInvitationsForSession: async () => [baseInvitation],
 
-  /* обновление статуса / роли */
   update: async (id, dto) =>
     ({
       ...baseInvitation,
@@ -57,7 +46,6 @@ const invitationStub: Partial<InvitationService> = {
     role: newRole,
   }),
 
-  /* принятие приглашения */
   acceptInvitation: async (id) => ({
     ...baseInvitation,
     id,
@@ -65,12 +53,10 @@ const invitationStub: Partial<InvitationService> = {
     notificationStatus: NotificationStatus.READ,
   }),
 
-  /* технические */
   findById: async (id) => ({ ...baseInvitation, id }),
   delete: async () => undefined,
 };
 
-/* ─────────── CreateInvitationUseCase stub ─────────── */
 const createInvUseCaseStub: Partial<CreateInvitationUseCase> = {
   execute: async () => ({
     ...baseInvitation,
@@ -82,15 +68,11 @@ const ctxStub: Partial<SessionContextService> = {
   getSessionIdOrThrow: () => SESSION_ID,
 };
 
-/* ───────────── JWT helpers ───────────── */
-
 const JWT_SECRET = 'invite-gw-secret';
 
 process.env.JWT_ACCESS_SECRET = JWT_SECRET;
 
 const makeJwt = (js: JwtService, uid: number) => js.sign({ sub: uid }, { secret: JWT_SECRET, expiresIn: '1h' });
-
-/* ─────────────────────────────────────── */
 
 describe('InvitationGateway (websocket)', () => {
   let app: INestApplication;
@@ -120,7 +102,6 @@ describe('InvitationGateway (websocket)', () => {
     url = `http://localhost:${(server.address() as any).port}`;
     jwt = app.get(JwtService);
 
-    /* 1) маленький middleware чтобы на любом сокете был .data.userId */
     const gw = mod.get(InvitationGateway);
 
     (gw as any).server.use((sock: any, next: any) => {
@@ -131,20 +112,16 @@ describe('InvitationGateway (websocket)', () => {
           .split('=')[1];
 
         sock.data.userId = (jwt.verify(token, { secret: JWT_SECRET }) as any).sub;
-      } catch {
-        /* ignore */
-      }
+      } catch {}
 
       next();
     });
 
-    /* 2) “broadcast to everyone” для простых проверок  */
     (gw as any).server.to = () => (gw as any).server;
   });
 
   afterAll(() => app.close());
 
-  /* крошечная фабрика клиента */
   const client = (uid: number): Socket =>
     ioc(url, {
       path: '/collaboration-session-socket',
@@ -153,8 +130,6 @@ describe('InvitationGateway (websocket)', () => {
       },
       transports: ['websocket'],
     });
-
-  /* ─────────── tests ─────────── */
 
   it('joinDashboard emits notifications', () =>
     new Promise<void>((resolve, reject) => {
@@ -203,7 +178,6 @@ describe('InvitationGateway (websocket)', () => {
         }),
       );
 
-      /* обе стороны получают одно и то же событие */
       inviter.once('newInvitation', (inv) => {
         expect(inv.id).toBe(11);
         gotInvFromSession = true;

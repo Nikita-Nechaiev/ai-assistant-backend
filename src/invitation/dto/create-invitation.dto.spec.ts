@@ -1,10 +1,8 @@
-/* create-invitation.dto.spec.ts */
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CreateInvitationDto } from './create-invitation.dto';
 import { Permission, InvitationStatus, NotificationStatus } from 'src/common/enums/enums';
 
-/* -------------------------------- helpers ------------------------------- */
 const validUser = () => ({ id: 1, email: 'receiver@mail.com' });
 const validSession = () => ({ id: 10 });
 
@@ -19,7 +17,6 @@ function validateDto(partial: Partial<CreateInvitationDto>) {
   return validate(dto);
 }
 
-/* -------------------------------- tests ---------------------------------- */
 describe('CreateInvitationDto validation', () => {
   it('passes with minimal valid payload', async () => {
     const errors = await validateDto({});

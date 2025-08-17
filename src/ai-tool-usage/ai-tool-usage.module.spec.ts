@@ -2,7 +2,6 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
 jest.mock('openai', () => ({
-  /*   new OpenAI() → фейковый клиент, достаточно пустых методов  */
   default: jest.fn().mockImplementation(() => ({
     chat: { completions: { create: jest.fn() } },
   })),
@@ -14,7 +13,7 @@ jest.mock('@nestjs/typeorm', () => {
   const forFeature = jest.fn().mockImplementation((entities: any[] = []) => {
     const providers = entities.map((e) => ({
       provide: getRepositoryToken(e),
-      useValue: {}, // мок-репозиторий
+      useValue: {},
     }));
 
     return { module: actual.TypeOrmModule, providers, exports: providers };

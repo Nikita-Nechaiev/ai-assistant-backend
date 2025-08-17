@@ -5,15 +5,11 @@ import { CollaborationSessionController } from './collaboration-session.controll
 import { CollaborationSessionService } from './collaboration-session.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
-/* ------------------------------------------------------------------ */
-/* mocks                                                              */
-/* ------------------------------------------------------------------ */
 const mockService = {
   getUserSessions: jest.fn(),
   createSession: jest.fn(),
 };
 
-/* guard that always succeeds and injects user.id = 11 */
 class MockJwtAuthGuard {
   canActivate(ctx: ExecutionContext) {
     ctx.switchToHttp().getRequest().user = { id: 11 };
@@ -22,9 +18,6 @@ class MockJwtAuthGuard {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* test-suite                                                         */
-/* ------------------------------------------------------------------ */
 describe('CollaborationSessionController', () => {
   let app: INestApplication;
 
@@ -45,15 +38,11 @@ describe('CollaborationSessionController', () => {
     await app.close();
   });
 
-  /* -------------------------------------------------------------- */
-  /* GET /collaboration-session/get-user-sessions                   */
-  /* -------------------------------------------------------------- */
   it('returns user sessions (default page)', async () => {
     mockService.getUserSessions.mockResolvedValueOnce(['s1']);
 
     await request(app.getHttpServer()).get('/collaboration-session/get-user-sessions').expect(200).expect(['s1']);
 
-    // page=1 -> skip 0, take 25
     expect(mockService.getUserSessions).toHaveBeenCalledWith(11, 0, 25, undefined);
   });
 
@@ -62,7 +51,6 @@ describe('CollaborationSessionController', () => {
 
     await request(app.getHttpServer()).get('/collaboration-session/get-user-sessions?page=2&search=hello').expect(200);
 
-    // page=2 -> skip 25
     expect(mockService.getUserSessions).toHaveBeenCalledWith(11, 25, 25, 'hello');
   });
 
@@ -72,9 +60,6 @@ describe('CollaborationSessionController', () => {
     await request(app.getHttpServer()).get('/collaboration-session/get-user-sessions?page=abc').expect(400);
   });
 
-  /* -------------------------------------------------------------- */
-  /* POST /collaboration-session/create                             */
-  /* -------------------------------------------------------------- */
   it('creates new session for current user', async () => {
     mockService.createSession.mockResolvedValueOnce({ id: 3, name: 'New' });
 

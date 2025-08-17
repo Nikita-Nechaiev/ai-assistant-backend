@@ -1,4 +1,3 @@
-// src/ai-tool-usage/ai-tool-usage.service.spec.ts
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -6,18 +5,12 @@ import { AiToolUsageService } from './ai-tool-usage.service';
 import { AiToolUsage } from './ai-tool-usage.model';
 import { AiTool } from 'src/common/enums/enums';
 
-/* ------------------------------------------------------------------ */
-/* repository factory                                                 */
-/* ------------------------------------------------------------------ */
 const repoFactory = () => ({
   createQueryBuilder: jest.fn(),
   find: jest.fn(),
   save: jest.fn(),
 });
 
-/* ------------------------------------------------------------------ */
-/* OpenAI stub                                                        */
-/* ------------------------------------------------------------------ */
 const makeCreate = () =>
   jest.fn().mockResolvedValue({
     choices: [{ message: { content: 'mocked text' } }],
@@ -33,7 +26,6 @@ describe('AiToolUsageService', () => {
   let svc: AiToolUsageService;
   let repo: jest.Mocked<Repository<AiToolUsage>>;
 
-  // injected OpenAI stub
   const openAiMock = {
     chat: { completions: { create: makeCreate() } },
   };
@@ -51,14 +43,11 @@ describe('AiToolUsageService', () => {
     svc = module.get(AiToolUsageService);
     repo = module.get(getRepositoryToken(AiToolUsage));
 
-    (svc as any).openai = openAiMock; // replace OpenAI client
+    (svc as any).openai = openAiMock;
   });
 
   afterEach(() => jest.clearAllMocks());
 
-  /* ------------------------------------------------------------------
-   * getUsageByUser – both query-builder branches
-   * ----------------------------------------------------------------- */
   describe('getUsageByUser', () => {
     const qb = (list: unknown[]) => {
       const chain = {
@@ -78,7 +67,7 @@ describe('AiToolUsageService', () => {
 
       repo.createQueryBuilder.mockReturnValue(builder as any);
 
-      await svc.getUsageByUser(3, 2, 4); // page 2 → skip 4
+      await svc.getUsageByUser(3, 2, 4);
 
       expect(repo.createQueryBuilder).toHaveBeenCalledWith('usage');
       expect(builder.skip).toHaveBeenCalledWith(4);
@@ -100,9 +89,6 @@ describe('AiToolUsageService', () => {
     });
   });
 
-  /* ------------------------------------------------------------------
-   * getUsageByDocument
-   * ----------------------------------------------------------------- */
   it('delegates getUsageByDocument to repository.find', async () => {
     repo.find.mockResolvedValue([{ id: 5 }] as any);
 
@@ -113,9 +99,6 @@ describe('AiToolUsageService', () => {
     });
   });
 
-  /* ------------------------------------------------------------------
-   * getMostFrequentAiTool  – stats & empty default
-   * ----------------------------------------------------------------- */
   it('getMostFrequentAiTool returns correct stats and defaults', async () => {
     const now = new Date();
 
@@ -140,9 +123,6 @@ describe('AiToolUsageService', () => {
     expect(empty.mostFrequentTool).toBeNull();
   });
 
-  /* ------------------------------------------------------------------
-   * translateText branch with documentId
-   * ----------------------------------------------------------------- */
   it('translateText persists usage with documentId', async () => {
     createMock.mockResolvedValueOnce({
       choices: [{ message: { content: 'bonjour' } }],
@@ -157,9 +137,6 @@ describe('AiToolUsageService', () => {
     expect(saved.id).toBe(77);
   });
 
-  /* ------------------------------------------------------------------
-   * Wrapper methods call processAiTool with correct toolName
-   * ----------------------------------------------------------------- */
   const wrappers: Array<[keyof AiToolUsageService, AiTool]> = [
     ['analyzeTone', AiTool.TONE_ANALYSIS],
     ['summarizeText', AiTool.SUMMARIZATION],
@@ -181,18 +158,12 @@ describe('AiToolUsageService', () => {
     expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ toolName: tool, user: { id: 2 } }));
   });
 
-  /* ------------------------------------------------------------------
-   * processAiTool error path
-   * ----------------------------------------------------------------- */
   it('throws proper error message when OpenAI fails', async () => {
     createMock.mockRejectedValueOnce(new Error('boom'));
 
     await expect(svc.extractKeywords(1, 'txt')).rejects.toThrow(`${AiTool.KEYWORD_EXTRACTION} failed.`);
   });
 
-  /* ------------------------------------------------------------------
-   * analyzeTextMetrics – happy & invalid branch
-   * ----------------------------------------------------------------- */
   it('analyzeTextMetrics clamps values between 1 and 100', async () => {
     createMock.mockResolvedValueOnce({
       choices: [{ message: { content: JSON.stringify({ readabilityScore: 150, toneAnalysis: -3 }) } }],
@@ -211,9 +182,6 @@ describe('AiToolUsageService', () => {
     await expect(svc.analyzeTextMetrics('ipsum')).rejects.toThrow('Failed to analyze text metrics.');
   });
 
-  /* ------------------------------------------------------------------
-   * cleanText helper
-   * ----------------------------------------------------------------- */
   it('cleanText collapses whitespace & strips escape chars', () => {
     expect((svc as any).cleanText('foo  \n  bar  \\ "baz"')).toBe('foo bar baz');
   });

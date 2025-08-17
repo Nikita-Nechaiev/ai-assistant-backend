@@ -1,17 +1,15 @@
-// test/collaboration-session.e2e-spec.ts
 import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import * as cookieParser from 'cookie-parser';
-import { AppModule } from '../src/app.module';
+import { AppModule } from 'src/app.module';
 
 describe('Collaboration-session module (e2e)', () => {
   let app: INestApplication;
   let agent: ReturnType<typeof request.agent>;
 
-  /* cookies we need to replay */
-  let accessCookie = ''; // accessToken=...
-  let refreshCookie = ''; // refreshToken=...
+  let accessCookie = '';
+  let refreshCookie = '';
 
   beforeAll(async () => {
     const modRef = await Test.createTestingModule({
@@ -28,7 +26,6 @@ describe('Collaboration-session module (e2e)', () => {
 
   afterAll(() => app.close());
 
-  /* ─────────── bootstrap user (register → login) ─────────── */
   const now = Date.now();
   const user = {
     email: `e2e_cs_${now}@mail.com`,
@@ -54,8 +51,6 @@ describe('Collaboration-session module (e2e)', () => {
 
     const loginRes = await agent.post('/auth/login').send({ email: user.email, password: user.password }).expect(200);
 
-    /* harvest cookies manually because “secure” cookies are not
-       resent by SuperTest over HTTP */
     const raw = loginRes.headers['set-cookie'] ?? [];
     const cookies = Array.isArray(raw) ? raw : [raw];
 
@@ -65,10 +60,7 @@ describe('Collaboration-session module (e2e)', () => {
     expect(accessCookie).toBeDefined();
   });
 
-  /* helper to attach both cookies */
   const authCookies = () => `${accessCookie}; ${refreshCookie}`;
-
-  /* ───────────────────  tests  ─────────────────── */
 
   let sessionId: number;
 

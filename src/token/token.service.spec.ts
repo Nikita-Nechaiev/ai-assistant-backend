@@ -37,9 +37,7 @@ describe('TokenService', () => {
   });
 
   it('generates access & refresh tokens with correct params', () => {
-    jwtMock.sign
-      .mockReturnValueOnce('acc') // first call – access
-      .mockReturnValueOnce('ref'); // second call – refresh
+    jwtMock.sign.mockReturnValueOnce('acc').mockReturnValueOnce('ref');
 
     const payload = { sub: 1 };
 

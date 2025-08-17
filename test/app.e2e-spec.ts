@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from 'src/app.module';
 
-jest.setTimeout(15000); // 15 сек., если нужно
+jest.setTimeout(15000);
 
 describe('App (e2e)', () => {
   let app: INestApplication;

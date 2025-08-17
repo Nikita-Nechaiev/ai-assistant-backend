@@ -1,7 +1,3 @@
-/* ------------------------------------------------------------------ */
-/*  collaboration-session.gateway.spec.ts                             */
-/*  Полное покрытие всех веток CollaborationSessionGateway            */
-/* ------------------------------------------------------------------ */
 import { CollaborationSessionGateway } from './collaboration-session.gateway';
 import { SessionPresenceService } from 'src/collaboration-session/presence/session-presence.service';
 import { MessagesService } from 'src/messages/messages.service';
@@ -12,9 +8,6 @@ import { Permission } from 'src/common/enums/enums';
 import { verify as jwtVerify } from 'jsonwebtoken';
 import { Logger } from '@nestjs/common';
 
-/* ------------------------------------------------------------------ */
-/* Helpers: fake socket & server                                      */
-/* ------------------------------------------------------------------ */
 function fakeSocket(id = 'sock-1', userId = 7) {
   const s: any = {
     id,
@@ -23,7 +16,7 @@ function fakeSocket(id = 'sock-1', userId = 7) {
     join: jest.fn(),
     leave: jest.fn(),
     emit: jest.fn(),
-    to: jest.fn().mockReturnThis(), // chain-able .to().emit()
+    to: jest.fn().mockReturnThis(),
     disconnect: jest.fn(),
   };
 
@@ -39,9 +32,6 @@ function fakeServer() {
   return svr;
 }
 
-/* ------------------------------------------------------------------ */
-/* Hard mocks for injected services                                   */
-/* ------------------------------------------------------------------ */
 const authMock = { refresh: jest.fn() };
 const presenceMock = {
   leave: jest.fn(),
@@ -64,14 +54,10 @@ const collabMock = {
   findById: jest.fn(),
 };
 
-/* jsonwebtoken verify mock */
 jest.mock('jsonwebtoken', () => ({ verify: jest.fn() }));
 
 const verifyMock = jwtVerify as unknown as jest.Mock;
 
-/* ------------------------------------------------------------------ */
-/* Factory to build gateway with our mocks                            */
-/* ------------------------------------------------------------------ */
 function buildGateway() {
   const gw = new CollaborationSessionGateway(
     authMock as unknown as AuthService,
@@ -81,22 +67,17 @@ function buildGateway() {
     collabMock as unknown as CollaborationSessionService,
   );
 
-  gw['server'] = fakeServer(); // inject fake Server
+  gw['server'] = fakeServer();
 
   return gw;
 }
 
-/* silence Logger output during tests */
 jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
 jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
 
-/* ------------------------------------------------------------------ */
-/* Tests                                                              */
-/* ------------------------------------------------------------------ */
 describe('CollaborationSessionGateway – branches & side-effects', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  /* ---------- afterInit(): log branch ---------- */
   it('afterInit logs initialisation', () => {
     const gw = buildGateway();
     const spy = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
@@ -106,7 +87,6 @@ describe('CollaborationSessionGateway – branches & side-effects', () => {
     expect(spy).toHaveBeenCalledWith('WebSocket gateway initialised');
   });
 
-  /* ---------- handleDisconnect(): userLeft broadcast ---------- */
   it('handleDisconnect emits userLeft when presence returns id', async () => {
     const gw = buildGateway();
     const socket = fakeSocket();
@@ -120,7 +100,6 @@ describe('CollaborationSessionGateway – branches & side-effects', () => {
     expect(gw['server'].emit).toHaveBeenCalledWith('userLeft', { userId: 7 });
   });
 
-  /* ---------- joinSession(): happy path ---------- */
   it('joinSession joins room, emits snapshot and broadcasts new user', async () => {
     const gw = buildGateway();
     const socket = fakeSocket();
@@ -140,7 +119,6 @@ describe('CollaborationSessionGateway – branches & side-effects', () => {
     expect(socket.to().emit).toHaveBeenCalledWith('newOnlineUser', { id: 99 });
   });
 
-  /* ---------- joinSession(): forbidden branch ---------- */
   it('joinSession sends invalidSession and exits when not allowed', async () => {
     const gw = buildGateway();
     const socket = fakeSocket();
@@ -160,7 +138,6 @@ describe('CollaborationSessionGateway – branches & side-effects', () => {
     expect(socket.join).not.toHaveBeenCalled();
   });
 
-  /* ---------- getTotalSessionData(): early-return branch ---------- */
   it('getTotalSessionData returns early when no session id', async () => {
     const gw = buildGateway();
     const socket = fakeSocket();
@@ -173,7 +150,6 @@ describe('CollaborationSessionGateway – branches & side-effects', () => {
     expect(socket.emit).not.toHaveBeenCalled();
   });
 
-  /* ---------- deleteSession(): complete flow ---------- */
   it('deleteSession removes session, notifies users and kicks sockets', async () => {
     const gw = buildGateway();
     const socket = fakeSocket();
@@ -193,7 +169,6 @@ describe('CollaborationSessionGateway – branches & side-effects', () => {
     expect(gw['server'].socketsLeave).toHaveBeenCalledWith('session_101');
   });
 
-  /* ---------- renameSession(): full update ---------- */
   it('renameSession updates name, fetches fresh data and broadcasts', async () => {
     const gw = buildGateway();
     const socket = fakeSocket();
@@ -209,7 +184,6 @@ describe('CollaborationSessionGateway – branches & side-effects', () => {
     expect(gw['server'].emit).toHaveBeenCalledWith('sessionData', { id: 202, n: 'new' });
   });
 
-  /* ---------- changePermissions(): early-return branch ---------- */
   it('changePermissions exits early when socket not in a session', async () => {
     const gw = buildGateway();
     const socket = fakeSocket();
@@ -222,7 +196,6 @@ describe('CollaborationSessionGateway – branches & side-effects', () => {
     expect(gw['server'].to).not.toHaveBeenCalled();
   });
 
-  /* ---------- existing tests kept for full coverage ---------- */
   it('sendMessage broadcasts newMessage to room', async () => {
     const gw = buildGateway();
     const socket = fakeSocket();
@@ -282,9 +255,6 @@ describe('CollaborationSessionGateway – branches & side-effects', () => {
   });
 });
 
-/* ------------------------------------------------------------------ */
-/* Connection-handling scenarios                                      */
-/* ------------------------------------------------------------------ */
 describe('CollabGateway handleConnection', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -331,7 +301,7 @@ describe('CollabGateway handleConnection', () => {
 
   it('disconnects socket when cookies missing', async () => {
     const gw = buildGateway();
-    const sock = fakeSocket('sock-bad', 7); // cookie пустая
+    const sock = fakeSocket('sock-bad', 7);
 
     await gw.handleConnection(sock as any);
 
@@ -339,7 +309,7 @@ describe('CollabGateway handleConnection', () => {
     expect(sock.join).not.toHaveBeenCalled();
   });
 
-  it('disconnects socket when verify throws непредвиденную ошибку', async () => {
+  it('disconnects socket when verify throws an unexpected error', async () => {
     const gw = buildGateway();
     const sock = fakeSocket('sock-fail', 7);
 

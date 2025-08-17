@@ -1,7 +1,3 @@
-/* ------------------------------------------------------------------ */
-/* ai-tool-usage.controller.spec.ts – полный файл с расширенным       */
-/* покрытием (ветки с documentId теперь тестируются)                  */
-/* ------------------------------------------------------------------ */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
@@ -9,9 +5,6 @@ import { AiToolUsageController } from './ai-tool-usage.controller';
 import { AiToolUsageService } from './ai-tool-usage.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
-/* ------------------------------------------------------------------ */
-/* Моки                                                                */
-/* ------------------------------------------------------------------ */
 const mockService = {
   getUsageByUser: jest.fn(),
   getMostFrequentAiTool: jest.fn(),
@@ -31,7 +24,7 @@ class MockJwtAuthGuard {
   canActivate(ctx: ExecutionContext) {
     const req = ctx.switchToHttp().getRequest();
 
-    req.user = { id: 42 }; // подставляем тестового пользователя
+    req.user = { id: 42 };
 
     return true;
   }
@@ -59,9 +52,6 @@ describe('AiToolUsageController', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  /* ------------------------------------------------------------------ */
-  /*  GET-маршруты                                                      */
-  /* ------------------------------------------------------------------ */
   describe('GET /ai-tool-usage/user', () => {
     it('returns usage for current user', async () => {
       mockService.getUsageByUser.mockResolvedValueOnce(['usage1']);
@@ -99,9 +89,6 @@ describe('AiToolUsageController', () => {
     expect(mockService.getUsageByDocument).toHaveBeenCalledWith(99);
   });
 
-  /* ------------------------------------------------------------------ */
-  /*  POST-маршруты без documentId                                      */
-  /* ------------------------------------------------------------------ */
   it.each([
     ['grammar-check', 'checkGrammar'],
     ['tone-analysis', 'analyzeTone'],
@@ -123,9 +110,6 @@ describe('AiToolUsageController', () => {
     else expect(mockService[method]).toHaveBeenCalledWith(42, 'hello', undefined);
   });
 
-  /* ------------------------------------------------------------------ */
-  /*  🆕  POST-маршруты С documentId                                    */
-  /* ------------------------------------------------------------------ */
   it.each([
     ['grammar-check', 'checkGrammar'],
     ['tone-analysis', 'analyzeTone'],

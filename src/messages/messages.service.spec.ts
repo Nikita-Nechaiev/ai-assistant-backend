@@ -32,7 +32,6 @@ describe('MessagesService', () => {
     const text = 'hello';
 
     it('persists message then returns populated message', async () => {
-      // mock repo.create & save
       repo.create.mockReturnValue({} as any);
       repo.save.mockResolvedValue({ id: 1 } as any);
 

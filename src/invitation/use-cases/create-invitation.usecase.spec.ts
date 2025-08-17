@@ -6,8 +6,6 @@ import { UserCollaborationSessionService } from 'src/user-collaboration-session/
 import { InvitationService } from 'src/invitation/invitation.service';
 import { InvitationStatus, NotificationStatus, Permission } from 'src/common/enums/enums';
 
-/* ------------------------------------------------------------------ */
-/* mocks                                                              */
 const usersMock = {
   findByEmail: jest.fn(),
   findById: jest.fn(),

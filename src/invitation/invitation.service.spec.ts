@@ -115,7 +115,7 @@ describe('InvitationService', () => {
   it('accepts pending invitation and creates user session', async () => {
     const inv = fullInvitation();
 
-    repo.findOne.mockResolvedValue(inv); // used by findById
+    repo.findOne.mockResolvedValue(inv);
     repo.save.mockResolvedValue({ ...inv, invitationStatus: InvitationStatus.ACCEPTED });
     ucsMock.createSession.mockResolvedValue({});
 

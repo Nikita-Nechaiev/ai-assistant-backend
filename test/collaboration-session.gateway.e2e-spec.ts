@@ -1,8 +1,3 @@
-/* test/collaboration-session.gateway.e2e-spec.ts
- *
- * Integration tests for CollaborationSessionGateway
- * ───────────────────────────────────────────────── */
-
 import { Test } from '@nestjs/testing';
 import { INestApplication, Logger, UnauthorizedException, ValidationPipe } from '@nestjs/common';
 import { JwtModule, JwtService } from '@nestjs/jwt';
@@ -16,8 +11,6 @@ import { SessionPresenceService } from 'src/collaboration-session/presence/sessi
 import { MessagesService } from 'src/messages/messages.service';
 import { UserCollaborationSessionService } from 'src/user-collaboration-session/user-collaboration-session.service';
 import { CollaborationSessionService } from 'src/collaboration-session/collaboration-session.service';
-
-/* ─────────────── lightweight stubs ─────────────── */
 
 const presenceStub = {
   _online: new Map<string, { userId: number; sessionId: number }>(),
@@ -78,8 +71,6 @@ const collabSessionStub = {
   updateSessionName: async () => undefined,
 };
 
-/* ─────────────────── helpers ─────────────────── */
-
 const JWT_SECRET = 'e2e-secret';
 
 process.env.JWT_ACCESS_SECRET = JWT_SECRET;
@@ -87,15 +78,13 @@ process.env.JWT_REFRESH_SECRET = 'stub';
 
 const makeJwt = (jwt: JwtService, userId: number) => jwt.sign({ sub: userId }, { secret: JWT_SECRET, expiresIn: '1h' });
 
-/* ════════════════════════════════════════════════ */
-
 describe('CollaborationSessionGateway (websocket)', () => {
   let app: INestApplication;
   let server: Server;
   let jwt: JwtService;
   let address: string;
 
-  Logger.overrideLogger(false); // quiet output
+  Logger.overrideLogger(false);
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -113,7 +102,7 @@ describe('CollaborationSessionGateway (websocket)', () => {
     app = moduleRef.createNestApplication();
     app.use(cookieParser());
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-    await app.listen(0); // random free port
+    await app.listen(0);
 
     server = app.getHttpServer();
     address = `http://localhost:${(server.address() as any).port}`;
@@ -121,8 +110,6 @@ describe('CollaborationSessionGateway (websocket)', () => {
   });
 
   afterAll(() => app.close());
-
-  /* ─────────── 1. handshake ─────────── */
 
   it('rejects connection without cookies', (done) => {
     const s = ioc(address, {
@@ -155,8 +142,6 @@ describe('CollaborationSessionGateway (websocket)', () => {
       done();
     });
   });
-
-  /* ─────────── 2. joinSession broadcast ─────────── */
 
   it('joinSession sets rooms and broadcasts', (done) => {
     const cookieA = `accessToken=${makeJwt(jwt, 42)}; refreshToken=stub`;
@@ -192,7 +177,7 @@ describe('CollaborationSessionGateway (websocket)', () => {
       try {
         expect(user.id).toBe(43);
         isCompleted = true;
-        clearTimeout(watchdog); // <──--- THIS line fixes the open handle
+        clearTimeout(watchdog);
         clientA.close();
         clientB.close();
         done();
@@ -204,8 +189,6 @@ describe('CollaborationSessionGateway (websocket)', () => {
       }
     });
   });
-
-  /* ─────────── 3. sendMessage echo ─────────── */
 
   it('sendMessage stores and emits newMessage', (done) => {
     const cookie = `accessToken=${makeJwt(jwt, 55)}; refreshToken=stub`;
@@ -226,7 +209,7 @@ describe('CollaborationSessionGateway (websocket)', () => {
     });
 
     client.on('newMessage', (msg) => {
-      clearTimeout(timeout); // <--- Очищаем таймер!
+      clearTimeout(timeout);
       expect(msg.text).toBe('hello world');
       client.close();
       done();

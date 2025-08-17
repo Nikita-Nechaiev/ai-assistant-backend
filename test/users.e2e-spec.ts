@@ -1,4 +1,3 @@
-// test/users.e2e-spec.ts
 import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
@@ -9,7 +8,6 @@ describe('Users module (e2e)', () => {
   let app: INestApplication;
   let agent: ReturnType<typeof request.agent>;
 
-  /* cookies for the authenticated user */
   let accessCookie = '';
   let refreshCookie = '';
 
@@ -28,7 +26,6 @@ describe('Users module (e2e)', () => {
 
   afterAll(() => app.close());
 
-  /* ────────── bootstrap user (register → login) ────────── */
   const ts = Date.now();
   const user = {
     email: `e2e_user_${ts}@mail.com`,
@@ -37,7 +34,6 @@ describe('Users module (e2e)', () => {
   };
 
   beforeAll(async () => {
-    /* register */
     const fakeJpeg = Buffer.from(
       '/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxISEhUTEhAVFRUVFRUVFRUVFRUVFRUVFRUWFhUV' +
         'FRUYHSggGBolHRUWITEhJSkrLi4uFx8zODMtNygtLisBCgoKDg0OGxAQGy0lHyUtLS0tLS0tLS0t' +
@@ -53,7 +49,6 @@ describe('Users module (e2e)', () => {
       .attach('avatar', fakeJpeg, 'avatar.jpg')
       .expect(201);
 
-    /* login */
     const loginRes = await agent.post('/auth/login').send({ email: user.email, password: user.password }).expect(200);
 
     const raw = loginRes.headers['set-cookie'] ?? [];
@@ -63,10 +58,7 @@ describe('Users module (e2e)', () => {
     refreshCookie = cookies.find((c) => c.startsWith('refreshToken='))!;
   });
 
-  /* helper */
   const authCookies = () => `${accessCookie}; ${refreshCookie}`;
-
-  /* ─────────────────── tests ─────────────────── */
 
   it('GET /users/all-users → returns at least one user', async () => {
     const res = await agent.get('/users/all-users').expect(200);
@@ -74,7 +66,6 @@ describe('Users module (e2e)', () => {
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThan(0);
 
-    // make sure our user is present
     const me = res.body.find((u: any) => u.email === user.email);
 
     expect(me).toBeDefined();
@@ -89,7 +80,7 @@ describe('Users module (e2e)', () => {
       .patch('/users/profile')
       .set('Cookie', authCookies())
       .field('name', 'Updated Name')
-      .attach('avatar', Buffer.from([0xff, 0xd8, 0xff]), 'avatar.jpg') // tiny JPEG header
+      .attach('avatar', Buffer.from([0xff, 0xd8, 0xff]), 'avatar.jpg')
       .expect(200);
 
     expect(res.body.message).toBe('Profile updated');

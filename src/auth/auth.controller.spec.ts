@@ -33,12 +33,11 @@ const mockAuthService = {
   }),
 };
 
-/* ─── custom stub guard that injects req.user ─── */
 class MockGoogleGuard {
   canActivate(ctx: any) {
     const req = ctx.switchToHttp().getRequest();
 
-    req.user = { sub: 99 }; // whatever payload you need
+    req.user = { sub: 99 };
 
     return true;
   }
@@ -65,7 +64,6 @@ describe('AuthController e2e-style', () => {
     await app.close();
   });
 
-  /* ───────── login ───────── */
   it('POST /auth/login sets cookies and returns token', async () => {
     const res = await request(app.getHttpServer())
       .post('/auth/login')
@@ -82,7 +80,6 @@ describe('AuthController e2e-style', () => {
     );
   });
 
-  /* ───────── register – branch WITH accessToken ───────── */
   it('POST /auth/register returns user and sets both cookies (access + refresh)', async () => {
     const res = await request(app.getHttpServer())
       .post('/auth/register')
@@ -101,7 +98,6 @@ describe('AuthController e2e-style', () => {
     );
   });
 
-  /* ───────── logout paths ───────── */
   it('POST /auth/logout clears cookies', async () => {
     await request(app.getHttpServer())
       .post('/auth/logout')
@@ -120,7 +116,6 @@ describe('AuthController e2e-style', () => {
     await request(app.getHttpServer()).post('/auth/logout').expect(401);
   });
 
-  /* ───────── refresh-cookies paths ───────── */
   it('GET /auth/refresh-cookies issues new cookies', async () => {
     const res = await request(app.getHttpServer())
       .get('/auth/refresh-cookies')
@@ -140,7 +135,6 @@ describe('AuthController e2e-style', () => {
     await request(app.getHttpServer()).get('/auth/refresh-cookies').expect(401);
   });
 
-  /* ───────── get-tokens paths ───────── */
   it('GET /auth/get-tokens returns tokens & user', async () => {
     const res = await request(app.getHttpServer())
       .get('/auth/get-tokens')
@@ -158,7 +152,6 @@ describe('AuthController e2e-style', () => {
     await request(app.getHttpServer()).get('/auth/get-tokens').expect(401);
   });
 
-  /* ───────── forgot / reset pwd ───────── */
   it('POST /auth/forgot-password triggers email send', async () => {
     await request(app.getHttpServer()).post('/auth/forgot-password').send({ email: 'x@mail.com' }).expect(200);
 
@@ -171,7 +164,6 @@ describe('AuthController e2e-style', () => {
     expect(mockAuthService.resetPassword).toHaveBeenCalledWith('tkn', { password: 'Password1!' });
   });
 
-  /* ───────── Google callback success ───────── */
   it('GET /auth/google/callback redirects to dashboard on success', async () => {
     mockAuthService.oauthLogin.mockResolvedValueOnce({
       accessToken: 'oa',

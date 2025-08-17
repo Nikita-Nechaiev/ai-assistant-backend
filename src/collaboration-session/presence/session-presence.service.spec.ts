@@ -6,14 +6,10 @@ import { UserCollaborationSessionService } from 'src/user-collaboration-session/
 import { Socket } from 'socket.io';
 import { Permission } from 'src/common/enums/enums';
 
-/* ------------------------------------------------------------------ */
-/* helpers ----------------------------------------------------------- */
 function fakeSocket(id: string, userId: number): Socket {
   return { id, data: { userId } } as unknown as Socket;
 }
 
-/* ------------------------------------------------------------------ */
-/* mocks                                                              */
 const state = new SessionStateService();
 const collabMock = {
   getSession: jest.fn(),
@@ -24,14 +20,11 @@ const ucsMock = {
   updateLastInteracted: jest.fn(),
 };
 
-/* ------------------------------------------------------------------ */
-/* tests                                                              */
 describe('SessionPresenceService', () => {
   let svc: SessionPresenceService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    // fresh in-memory state before each test
     state.onlineUsers.clear();
     state.socketSessionMap.clear();
 
@@ -47,17 +40,11 @@ describe('SessionPresenceService', () => {
     svc = mod.get(SessionPresenceService);
   });
 
-  /* -------------------------------------------------------------- */
-  /* getSessionIdBySocket()                                         */
-  /* -------------------------------------------------------------- */
   it('gets session id from socket map', () => {
     state.socketSessionMap.set('sock1', 77);
     expect(svc.getSessionIdBySocket('sock1')).toBe(77);
   });
 
-  /* -------------------------------------------------------------- */
-  /* join()                                                         */
-  /* -------------------------------------------------------------- */
   describe('join()', () => {
     const sock = fakeSocket('s1', 5);
 
@@ -85,11 +72,7 @@ describe('SessionPresenceService', () => {
     });
   });
 
-  /* -------------------------------------------------------------- */
-  /* leave()                                                        */
-  /* -------------------------------------------------------------- */
   it('cleans up state and updates timeSpent on last socket', async () => {
-    // 1) prepare state
     const socket = fakeSocket('sock2', 7);
     const start = Date.now() - 5000;
 
@@ -106,13 +89,8 @@ describe('SessionPresenceService', () => {
     expect(ucsMock.updateLastInteracted).toHaveBeenCalled();
   });
 
-  /* -------------------------------------------------------------- */
-  /* getOnlineUsers() & getTimeUserSpent()                          */
-  /* -------------------------------------------------------------- */
   it('returns only users online in the same session', async () => {
-    // online user 9 for session 40
     state.onlineUsers.set(9, { sessionId: 40, startTime: Date.now(), socketIds: new Set(['x']) });
-    // build session data with two ucs rows
     collabMock.getSession.mockResolvedValue({
       userCollaborationSessions: [
         { user: { id: 9, name: 'N' }, permissions: [Permission.READ] },
@@ -132,9 +110,8 @@ describe('SessionPresenceService', () => {
     const sockA = fakeSocket('a', 11);
     const first = await svc.getTimeUserSpent(50, sockA);
 
-    expect(first).toBe(0); // initial seconds
+    expect(first).toBe(0);
 
-    // advance time by faking Date.now
     const t0 = Date.now();
 
     jest.spyOn(Date, 'now').mockReturnValue(t0 + 4000);
@@ -142,6 +119,6 @@ describe('SessionPresenceService', () => {
     const sockB = fakeSocket('b', 11);
     const total = await svc.getTimeUserSpent(50, sockB);
 
-    expect(total).toBeCloseTo(4, 0); // ~4 seconds
+    expect(total).toBeCloseTo(4, 0);
   });
 });
