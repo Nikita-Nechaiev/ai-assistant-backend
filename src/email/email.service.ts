@@ -29,7 +29,7 @@ export class EmailService {
     try {
       const info = await this.transporter.sendMail(mailOptions);
     } catch (error) {
-      console.error(`Failed to send email: ${error.message}`);
+      console.log(`Failed to send email: ${error.message}`);
       throw new Error('Email delivery failed');
     }
   }

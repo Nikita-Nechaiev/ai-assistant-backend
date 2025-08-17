@@ -30,36 +30,42 @@ export class AiToolUsageController {
   }
 
   @Get('document/:documentId')
-  async getUsageByDocument(@Param('documentId') documentId: number) {
-    return this.aiToolUsageService.getUsageByDocument(documentId);
+  async getUsageByDocument(@Param('documentId') documentId: string) {
+    const id = documentId ? parseInt(documentId, 10) : undefined;
+
+    return this.aiToolUsageService.getUsageByDocument(id);
   }
 
   @Post('grammar-check/:documentId?')
-  async checkGrammar(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
+  async checkGrammar(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: string) {
     const userId = req.user.id;
+    const id = documentId ? parseInt(documentId, 10) : undefined;
 
-    return this.aiToolUsageService.checkGrammar(userId, text, documentId);
+    return this.aiToolUsageService.checkGrammar(userId, text, id);
   }
 
   @Post('tone-analysis/:documentId?')
-  async analyzeTone(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
+  async analyzeTone(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: string) {
     const userId = req.user.id;
+    const id = documentId ? parseInt(documentId, 10) : undefined;
 
-    return this.aiToolUsageService.analyzeTone(userId, text, documentId);
+    return this.aiToolUsageService.analyzeTone(userId, text, id);
   }
 
   @Post('summarization/:documentId?')
-  async summarizeText(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
+  async summarizeText(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: string) {
     const userId = req.user.id;
+    const id = documentId ? parseInt(documentId, 10) : undefined;
 
-    return this.aiToolUsageService.summarizeText(userId, text, documentId);
+    return this.aiToolUsageService.summarizeText(userId, text, id);
   }
 
   @Post('rephrase/:documentId?')
-  async rephraseText(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
+  async rephraseText(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: string) {
     const userId = req.user.id;
+    const id = documentId ? parseInt(documentId, 10) : undefined;
 
-    return this.aiToolUsageService.rephraseText(userId, text, documentId);
+    return this.aiToolUsageService.rephraseText(userId, text, id);
   }
 
   @Post('translation/:documentId?')
@@ -67,38 +73,43 @@ export class AiToolUsageController {
     @Req() req,
     @Body('text') text: string,
     @Body('targetLanguage') targetLanguage: string,
-    @Param('documentId') documentId?: number,
+    @Param('documentId') documentId?: string,
   ) {
     const userId = req.user.id;
+    const id = documentId ? parseInt(documentId, 10) : undefined;
 
-    return this.aiToolUsageService.translateText(userId, text, targetLanguage, documentId);
+    return this.aiToolUsageService.translateText(userId, text, targetLanguage, id);
   }
 
   @Post('keyword-extraction/:documentId?')
-  async extractKeywords(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
+  async extractKeywords(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: string) {
     const userId = req.user.id;
+    const id = documentId ? parseInt(documentId, 10) : undefined;
 
-    return this.aiToolUsageService.extractKeywords(userId, text, documentId);
+    return this.aiToolUsageService.extractKeywords(userId, text, id);
   }
 
   @Post('text-generation/:documentId?')
-  async generateText(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
+  async generateText(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: string) {
     const userId = req.user.id;
+    const id = documentId ? parseInt(documentId, 10) : undefined;
 
-    return this.aiToolUsageService.generateText(userId, text, documentId);
+    return this.aiToolUsageService.generateText(userId, text, id);
   }
 
   @Post('readability-analysis/:documentId?')
-  async analyzeReadability(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
+  async analyzeReadability(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: string) {
     const userId = req.user.id;
+    const id = documentId ? parseInt(documentId, 10) : undefined;
 
-    return this.aiToolUsageService.analyzeReadability(userId, text, documentId);
+    return this.aiToolUsageService.analyzeReadability(userId, text, id);
   }
 
   @Post('title-generation/:documentId?')
-  async generateTitle(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: number) {
+  async generateTitle(@Req() req, @Body('text') text: string, @Param('documentId') documentId?: string) {
     const userId = req.user.id;
+    const id = documentId ? parseInt(documentId, 10) : undefined;
 
-    return this.aiToolUsageService.generateTitle(userId, text, documentId);
+    return this.aiToolUsageService.generateTitle(userId, text, id);
   }
 }

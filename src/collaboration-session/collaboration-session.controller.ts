@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Body, Param, Query, UseGuards, Req, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, UseGuards, Req, BadRequestException } from '@nestjs/common';
 import { Request } from 'express';
 import { CollaborationSessionService } from './collaboration-session.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
