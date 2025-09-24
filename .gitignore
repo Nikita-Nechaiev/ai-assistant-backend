@@ -44,3 +44,4 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 .test.env
 uploads
+tsconfig.build.tsbuildinfo

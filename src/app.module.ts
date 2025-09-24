@@ -29,20 +29,29 @@ import { UsersModule } from './user/users.module';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
-        const isTest = cfg.get('NODE_ENV') === 'test';
-        const dbUrl = cfg.get<string>('DATABASE_URL');
+        const env = cfg.get<string>('NODE_ENV') ?? 'development';
+        const dbUrl = cfg.get<string>('DATABASE_URL') ?? '';
+        const sslMode = (cfg.get<string>('DB_SSL_MODE') ?? 'auto').toLowerCase();
+
+        const isLocalish = (url?: string) =>
+          !!url && (/localhost/i.test(url) || /127\.0\.0\.1/.test(url) || /internal/i.test(url));
+
+        const isNeedSSL = sslMode === 'require' || (sslMode === 'auto' && dbUrl && !isLocalish(dbUrl));
 
         if (dbUrl) {
+          const ssl = isNeedSSL ? { rejectUnauthorized: false } : false;
+
           return {
             type: 'postgres',
             url: dbUrl,
             autoLoadEntities: true,
             synchronize: true,
-            ssl: dbUrl.includes('amazonaws.com') ? { rejectUnauthorized: false } : false,
+            ssl,
+            ...(isNeedSSL ? { extra: { ssl } } : {}),
           };
         }
 
-        if (isTest) {
+        if (env === 'test') {
           return {
             type: 'postgres',
             host: cfg.get('PG_HOST') ?? 'localhost',

@@ -1,100 +1,290 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+<PROJECT NAME> — Backend (NestJS + WebSockets + PostgreSQL)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+High-signal, production-style backend that demonstrates real-time features, clean architecture, fast APIs, and mature ops (tests, metrics, CI/CD). Built to show how I turn code into reliable product surface.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Live demo, metrics, and docs are linked below. Where you see <placeholder> I’ll fill it after we lock details.
 
-## Description
+TL;DR
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Stack: NestJS • TypeScript • PostgreSQL • <ORM_NAME: Prisma/TypeORM> • WebSockets (<WS_PROVIDER: Socket.IO/ws>)
 
-## Project setup
+What it does: <ONE-LINE PROBLEM & VALUE, e.g. “Real-time collaborative sessions with roles & invitations.”>
 
-```bash
-$ npm install
-```
+Why it matters: shows I can deliver fast APIs, reliable real-time flows, and ops hygiene (tests, CI/CD, observability).
 
-## Compile and run the project
+Live API: <LIVE_API_URL> • Swagger: <SWAGGER_URL or /docs> • Health: /health
 
-```bash
-# development
-$ npm run start
+Auth: <AUTH_MECHANISM: JWT/Session/OAuth> • Seed user: <EMAIL> / <PASSWORD>
 
-# watch mode
-$ npm run start:dev
+CI/CD: GitHub Actions → <DEPLOY_TARGET: Render/Fly.io/AWS>
 
-# production mode
-$ npm run start:prod
-```
+Coverage: <COVERAGE_STATEMENTS>% stmts • <COVERAGE_BRANCHES>% branches • <COVERAGE_FUNCS>% funcs
 
-## Run tests
+Perf (prod build): avg <AVG_RESPONSE_MS>ms, p95 <P95_MS>ms, p99 <P99_MS>ms across <N_ENDPOINTS> endpoints
 
-```bash
-# unit tests
-$ npm run test
+Screenshots & Artifacts
 
-# e2e tests
-$ npm run test:e2e
+Swagger UI: <SWAGGER_URL>
 
-# test coverage
-$ npm run test:cov
-```
+API probe results: /docs/probe-summary.txt
 
-## Deployment
+Load test: /docs/autocannon-<endpoint>.txt
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+CI badges:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Key Outcomes (what I optimized)
 
-```bash
-$ npm install -g mau
-$ mau deploy
-```
+Speed: API response time down to <AVG_RESPONSE_MS>ms avg (p95 <P95_MS>ms, p99 <P99_MS>ms).
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Reliability: Integrated unit + integration + e2e (REST + WebSocket) test layers.
 
-## Resources
+Ops: 1-click deploy via GitHub Actions; health checks, structured logs, and error tracking ready.
 
-Check out a few resources that may come in handy when working with NestJS:
+DX: local boot with Docker; seed command to demo features in under a minute.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Architecture (quick overview)
+apps/server
+├─ src
+│ ├─ main.ts # bootstrap, global pipes/filters, helmet, cors
+│ ├─ app.module.ts
+│ ├─ modules
+│ │ ├─ auth/ # JWT/session, guards, strategies
+│ │ ├─ users/
+│ │ ├─ sessions/ # core domain (documents/sessions/etc.)
+│ │ ├─ invitations/ # roles, invite flows
+│ │ ├─ notifications/
+│ │ └─ realtime/ # WebSocket gateway + events
+│ ├─ common/ # interceptors, filters, decorators, utils
+│ ├─ infra/
+│ │ ├─ db/ # <ORM_NAME> client, migrations, repositories
+│ │ └─ cache/ # <REDIS/IN-MEMORY>, keys, TTLs (optional)
+│ └─ config/ # env schema, config factory
+├─ test
+│ ├─ unit/ # services, guards, utils
+│ ├─ integration/ # Supertest over HTTP
+│ └─ e2e/ # end-to-end incl. WebSocket flows
+├─ docs/ # perf probes, load tests
+└─ ...
 
-## Support
+Design choices:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Modular Nest with clear domain modules and repository pattern.
 
-## Stay in touch
+WebSocket gateway (<WS_PROVIDER>) emits/consumes domain events (session.join, message.create, etc.).
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+DB access via <ORM_NAME> with typed repositories and transactional helpers.
 
-## License
+Config & Env validated via schema to avoid “works on my machine”.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-# ai-assistant-backend
+API Surface (selected)
+
+Full list in Swagger at /docs.
+
+POST /api/auth/login — authenticate & issue <TOKEN_TYPE>.
+
+GET /api/sessions — list sessions for current user.
+
+POST /api/sessions — create session.
+
+POST /api/invitations — invite user with role <role>.
+
+GET /api/notifications — unread list.
+
+GET /health — liveness & DB check.
+
+WebSocket events (<WS_PROVIDER>):
+
+session:join — client joins a room; server broadcasts presence.
+
+message:create — persist & emit to room subscribers.
+
+invitation:accept — updates role and notifies owners.
+
+Exact event names/payloads: see <WS_EVENTS_DOC_LINK>.
+
+Performance (benchmarked)
+
+Measured on production build (<ENV: local prod / staging / live URL>).
+
+Single-request probe (20 runs each):
+
+/api/auth/login — avg <LOGIN_AVG>ms, p95 <LOGIN_P95>ms, p99 <LOGIN_P99>ms
+
+/api/sessions — avg <SESS_AVG>ms, p95 <SESS_P95>ms, p99 <SESS_P99>ms
+
+/api/invitations — avg <INV_AVG>ms, p95 <INV_P95>ms, p99 <INV_P99>ms
+
+Load test (autocannon, 20s, c=50):
+
+/api/sessions — ~<RPS> req/s, avg latency <LAT_MS>ms
+
+Artifacts: see /docs/probe-summary.txt
+and /docs/autocannon-\*.txt
+.
+
+Security & Quality
+
+AuthN/AuthZ: <AUTH_DETAILS: JWT with access/refresh | session cookies + CSRF>.
+
+Input validation: Nest pipes (class-validator) + DTOs.
+
+Error handling: global filter with consistent error shape.
+
+Headers: Helmet, CORS policies (<CORS_POLICY>).
+
+Secrets: .env via <ENV_MANAGER>, validated schema (<ENV_SCHEMA_LIB>).
+
+Logs: structured logs (requestId, userId), log levels per env.
+
+Rate limiting: <RATE_LIMIT_STRATEGY or “planned”>.
+
+OWASP-friendly defaults: no stack traces in prod, sanitized errors.
+
+Tests
+
+Unit (Jest): services/guards/utils mocked, fast & deterministic.
+
+Integration (Supertest): boot app, hit real HTTP, seed data, assert outcomes.
+
+E2E: critical flows (auth → create → invite → realtime).
+
+WebSocket tests: connect, emit, assert broadcast & persistence.
+
+Coverage: <COVERAGE_STATEMENTS>% stmts • <COVERAGE_BRANCHES>% branches • <COVERAGE_FUNCS>% funcs
+
+Run locally:
+
+# Unit + integration
+
+npm run test
+
+# Watch
+
+npm run test:watch
+
+# Coverage
+
+npm run test:cov
+
+# E2E (spins up app; ensure DB is running & seeded)
+
+npm run test:e2e
+
+Local Development
+
+Prereqs: Node <VERSION>, Docker (for Postgres), pnpm/npm.
+
+1. Clone & install
+
+git clone <REPO_URL>
+cd <REPO_DIR>
+npm ci
+
+2. Bring up Postgres
+
+docker compose up -d db
+
+# or: docker run --name pg -e POSTGRES_PASSWORD=<pwd> -p 5432:5432 -d postgres:16
+
+3. Env
+   Create .env from .env.example:
+
+# Database
+
+DATABASE_URL=<postgres-connection-string or individual PG vars>
+
+# Auth
+
+JWT_SECRET=<secret>
+
+# Optional
+
+REDIS_URL=<redis://...>
+NODE_ENV=development
+PORT=4000
+
+4. Migrate & seed
+
+# Prisma example:
+
+npx prisma migrate deploy
+npm run seed
+
+# TypeORM example:
+
+npm run typeorm migration:run
+npm run seed
+
+Adjust for your <ORM_NAME> with <ORM_MIGRATE_COMMAND>.
+
+5. Run
+
+# Dev
+
+npm run start:dev
+
+# Prod build + run
+
+npm run build
+
+# Depending on nest-cli sourceRoot, the output entry is either:
+
+node dist/main.js
+
+# or:
+
+node dist/src/main.js
+
+Troubleshooting: if MODULE_NOT_FOUND → check which of the two files exists and use that path.
+
+CI/CD
+
+GitHub Actions:
+
+On PR: lint → unit/integration → smoke e2e → build.
+
+On main: full e2e + deploy to <DEPLOY_TARGET>.
+
+Artifacts on fail: test reports & logs archived.
+
+Badges: build/coverage/deploy at the top of this README.
+
+Workflows: see .github/workflows/\*.yml.
+
+Observability
+
+Health check at /health (liveness + DB ping).
+
+Metrics: <METRICS_STACK: Prometheus/OpenTelemetry/Planned>.
+
+Error tracking: <SENTRY/LOGROCKET/PLANNED>.
+
+Uptime monitor: <UPTIMEROBOT/LINK>.
+
+Roadmap
+
+RBAC 2.0 — finer-grained permissions.
+
+Rate-limit & IP throttling in gateway.
+
+Cache for hot endpoints (Redis), stale-while-revalidate.
+
+Idempotency keys for POST/PUT in high-latency clients.
+
+Background jobs (<QUEUE_LIB: BullMQ/RabbitMQ>) for heavy tasks.
+
+OpenAPI → SDK generation for the frontend and 3rd parties.
+
+Why this repository exists
+
+I’m aiming for a Series A/B product team where I can own backend surfaces that move business metrics. This codebase shows I can: design clean modules, keep APIs fast, ship reliable real-time features, and maintain engineering hygiene that scales with the team.
+
+If you want this level of rigor applied to your product in the first month, let’s talk.
+
+Email: <YOUR_EMAIL>
+
+LinkedIn: <YOUR_LINKEDIN>
+
+Resume (PDF): <YOUR_CV_LINK>
+
+Short demo (3 min Loom): <LOOM_LINK>
