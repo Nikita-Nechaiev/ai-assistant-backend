@@ -1,100 +1,130 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# AI-Editor Portfolio — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This is the server part of my portfolio project: live collaborative editing for documents plus built-in AI tools. Users sign in with email/password or Google, work together in sessions, use chat, manage access by roles, see version history and use ai assistance.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+**Goal:** show a real, production-level solution — deployed, tested, with clear architecture and stable behavior — not just a simple pet project.
 
-## Description
+## 1) Title & one-liner
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+**AI-Editor Portfolio — Backend**  
+NestJS + PostgreSQL + WebSocket. Authentication, roles & access, real-time sessions, document versions, chat, and AI actions.
 
-## Project setup
+## 2) Quick links
 
-```bash
-$ npm install
-```
+- **Production API:** https://ai-assistant-backend-fsdp.onrender.com
+- **WebSocket:** https://ai-assistant-backend-fsdp.onrender.com/collaboration-session-socket
+- **Health:** `<https://ai-assistant-backend-fsdp.onrender.com/health>`
+- **Frontend:** https://www.ai-editor-portfolio.com
+- **Demo (Loom):** <URL>
+- **Repository:** <URL>
 
-## Compile and run the project
+## 3) For Recruiters & CTO (30 seconds)
 
-```bash
-# development
-$ npm run start
+- **What it shows.** A working backend with auth, roles, live collaboration, chat, versions, and AI features — the building blocks you see in real products.
+- **Stack.** NestJS, TypeScript, PostgreSQL, WebSocket, TypeORM, JWT, SMTP (email), Google OAuth 2.0, OpenAI integration (keys are in environment variables).
+- **Quality.** Unit and e2e tests, coverage `<>%`. Checks run automatically on every PR.
+- **Reliability.** Average latency `<> ms`, uptime `<>%`. Structured logs and basic metrics are in place.
 
-# watch mode
-$ npm run start:dev
+## 4) Why it matters
 
-# production mode
-$ npm run start:prod
-```
+Most demos stop at CRUD. Here you also get role-based access, real-time editing via WebSocket, version history, 2-token based authentication, email notifications, Google sign-in, and AI actions right inside the document.  
+This reduces hiring risk: you can see how I model data, secure access, write tests, and ship features to production.
 
-## Run tests
+## 5) Architecture (short)
 
-```bash
-# unit tests
-$ npm run test
+The frontend talks to the API and connects to a WebSocket channel. Data lives in PostgreSQL. For AI actions, the backend calls an AI provider.
 
-# e2e tests
-$ npm run test:e2e
+FrontEnd (Next.js) -- REST/WS --> API(NestJS)
+API -- SQL --> DB(PostgreSQL)
+API -- AI calls --> AI(OpenAI)
+FrontEnd(Next.js) <-- realtime --> API
 
-# test coverage
-$ npm run test:cov
-```
+- **REST:** auth, documents, versions, sessions, ai-tools, email notifications.
+- **WebSocket:** live editing, session status, chat, ai-tools, invitations.
+- **AI:** actions to work with text (translate, rephrase, etc.).
 
-## Deployment
+## 6) Modules
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+- **Auth** — email/password with tokens (access/refresh), Google sign-in (`/auth/google/callback`), password reset via email.
+- **Users** — user profile and basic fields.
+- **Collaboration-session** — create/join/leave a collaboration session.
+- **User-collaboration-session** — create/join/leave. roles per collaborator, track session time (`timeSpent`).
+- **Documents** — CRUD document operations, content stored in Quill-compatible format (json/delta), export `<EN-only>`.
+- **Versions** — full history and restore to any document version.
+- **Invitations** — invite to a session with a role (admin / editor / viewer), invitation statuses.
+- **Messages** — real-time chat within a session.
+- **Ai-tools-usage** — a set of AI actions (e.g., translate, rephrase) with basic limits.
+- **Token** — validate, save, generate Jwt tokens.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 7) Security & privacy
 
-```bash
-$ npm install -g mau
-$ mau deploy
-```
+- **Auth:** tokens (access/refresh). Secrets and keys are stored only in environment variables on the hosting side.
+- **Access:** three roles — admin, editor, viewer; actions are restricted by role.
+- **Input checks:** all public requests are validated (both REST and WebSocket).
+- **Protection:** rate limits on sensitive routes, brute-force protection, CORS allowed only from the trusted frontend domain `https://www.ai-editor-portfolio.com`.
+- **Email:** notifications and password reset via SMTP (Gmail).
+- **OAuth:** secure callback URLs for Google sign-in.
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 8) Tests
 
-## Resources
+- **Types:**
 
-Check out a few resources that may come in handy when working with NestJS:
+  - Unit (Jest).
+  - e2e (Supertest for REST, mocked server for WebSocket).
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+- **Coverage:** 97% (statements), 82% (branches), 95% (functions), 98% (lines). Enforced in CI.
 
-## Support
+- **What’s covered:**
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+  - Registration, login, token refresh, password reset; protection of private routes.
+  - Role-based permissions on key flows.
+  - Documents (create/update/export), Versions (view/restore).
+  - Sessions (create/join/leave, time tracking).
+  - Invitations (send/accept/decline).
+  - Chat messages (delivery, error handling).
+  - WebSocket events (payload shape, error handling).
+  - AI calls are stubbed/mocked for stable tests.
+  - Database work — transactions and consistency in critical scenarios.
 
-## Stay in touch
+- **Summary:**
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+  - Unit: 29 suites, 249 tests, all passed (time ~7s).
+  - e2e: 8 suites, 30 tests, all passed (time ~3.8s).
 
-## License
+- **When it runs:** on every PR and the `main` branch; CI publishes coverage & test summary.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-# ai-assistant-backend
+## 9) Checks & auto-deploy (CI/CD)
+
+- **Pipeline:** `lint → unit → e2e → build → DB migrations → deploy`.
+- **Environments:** `<dev / stage / prod>` (separate env vars).
+- **Releases:** versioning and quick rollback to a previous build `<>`.
+
+## 10) Deployment & hosting
+
+- **Where it runs:** Render (`ai-assistant-backend-fsdp`), auto-deploy from `main`.
+- **Database:** PostgreSQL (`<provider/plan>`).
+- **Domains:** API — `ai-assistant-backend-fsdp.onrender.com`, frontend — `ai-editor-portfolio.com`.
+- **Ports & health:** the app listens on `<10000>` (hosting may override via ENV), health — `<GET /health>`.
+
+## 11) Roadmap & current limitsз
+
+**Coming soon:**
+
+- Multi-language export (`<languages>`).
+- Finer request limits by role.
+- AI metrics (per-function latency, token usage) and a small monitoring panel.
+- Better conflict resolution for concurrent editing.
+
+**Current limits:**
+
+- Export: `<EN-only>`.
+- Some AI actions have input size limits `<N>` (chars/tokens).
+- Some editing bugs are caused by the deprecated techniques of the Quill editor
+- Public Swagger/OpenAPI docs are intentionally not included here.
+
+## 15) Contacts
+
+- **Name:** Nikita Nechayev
+- **Email:** mykyta.nechaiev.dev@gmail.com
+- **Telegram:** @nechaiev_mykyta
+- **LinkedIn:** https://www.linkedin.com/in/mykyta-nechaiev-48b776358/
