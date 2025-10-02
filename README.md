@@ -11,9 +11,9 @@ NestJS + PostgreSQL + WebSocket. Authentication, roles & access, real-time sessi
 
 ## 2) Quick links
 
-- **Production API:** https://ai-assistant-backend-fsdp.onrender.com
-- **WebSocket:** https://ai-assistant-backend-fsdp.onrender.com/collaboration-session-socket
-- **Health:** `<https://ai-assistant-backend-fsdp.onrender.com/health>`
+- **Production API:** https://api.ai-editor-portf olio.com
+- **WebSocket:** https://api.ai-editor-portfolio.com/collaboration-session-socket
+- **Health:** https://api.ai-editor-portfolio.com/health
 - **Frontend:** https://www.ai-editor-portfolio.com
 - **Demo (Loom):** <URL>
 - **Repository:** <URL>
@@ -103,8 +103,8 @@ FrontEnd(Next.js) <-- realtime --> API
 
 - **Where it runs:** Render (`ai-assistant-backend-fsdp`), auto-deploy from `main`.
 - **Database:** PostgreSQL (`<provider/plan>`).
-- **Domains:** API — `ai-assistant-backend-fsdp.onrender.com`, frontend — `ai-editor-portfolio.com`.
-- **Ports & health:** the app listens on `<10000>` (hosting may override via ENV), health — `<GET /health>`.
+- **Domains:** API — https://api.ai-editor-portfolio.com, frontend — https://www.ai-editor-portfolio.com
+- **Ports & health:** the app listens on 10000, health — `<GET /health>`.
 
 ## 11) Roadmap & current limitsз
 
