@@ -13,6 +13,7 @@ import { MessagesModule } from './messages/messages.module';
 import { TokenModule } from './token/token.module';
 import { FileModule } from './file/file.module';
 import { UsersModule } from './user/users.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { UsersModule } from './user/users.module';
     MessagesModule,
     TokenModule,
     FileModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
