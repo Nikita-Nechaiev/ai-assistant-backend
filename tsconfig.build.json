@@ -3,7 +3,10 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "declaration": false
+    "declaration": false,
+    "incremental": true,
+    "noEmit": false,
+    "tsBuildInfoFile": "./node_modules/.cache/nest/tsconfig.build.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "test", "dist", "**/*.spec.ts"]
