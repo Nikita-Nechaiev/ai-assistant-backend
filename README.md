@@ -22,8 +22,9 @@ NestJS + PostgreSQL + WebSocket. Authentication, roles & access, real-time sessi
 
 - **What it shows.** A working backend with auth, roles, live collaboration, chat, versions, and AI features — the building blocks you see in real products.
 - **Stack.** NestJS, TypeScript, PostgreSQL, WebSocket, TypeORM, JWT, SMTP (email), Google OAuth 2.0, OpenAI integration (keys are in environment variables).
-- **Quality.** Unit and e2e tests, coverage `<>%`. Checks run automatically on every PR.
-- **Reliability.** Average latency `<> ms`, uptime `<>%`. Structured logs and basic metrics are in place.
+- **Quality.** Unit & e2e coverage: 97% statements, 82% branches, 95% functions, 98% lines. Full CI pipeline (lint → unit → e2e → build → deploy) runs on every PR.
+- **Reliability.** Average REST latency 50 ms (p50 = 50 ms, p95 = 119 ms, p99 = 252 ms).Structured logs and metrics are in place. Uptime 99.9 % (last 30 days, Render monitoring).
+
 
 ## 4) Why it matters
 
@@ -45,11 +46,11 @@ FrontEnd(Next.js) <-- realtime --> API
 
 ## 6) Modules
 
-- **Auth** — email/password with tokens (access/refresh), Google sign-in (`/auth/google/callback`), password reset via email.
+- **Auth** — email/password with tokens (access/refresh), Google sign-in /auth/google/callback, password reset via email.
 - **Users** — user profile and basic fields.
 - **Collaboration-session** — create/join/leave a collaboration session.
-- **User-collaboration-session** — create/join/leave. roles per collaborator, track session time (`timeSpent`).
-- **Documents** — CRUD document operations, content stored in Quill-compatible format (json/delta), export `<EN-only>`.
+- **User-collaboration-session** — create/join/leave. roles per collaborator, track session time (timeSpent).
+- **Documents** — CRUD document operations, content stored in Quill-compatible format (richContent), export in PDF.
 - **Versions** — full history and restore to any document version.
 - **Invitations** — invite to a session with a role (admin / editor / viewer), invitation statuses.
 - **Messages** — real-time chat within a session.
@@ -61,7 +62,7 @@ FrontEnd(Next.js) <-- realtime --> API
 - **Auth:** tokens (access/refresh). Secrets and keys are stored only in environment variables on the hosting side.
 - **Access:** three roles — admin, editor, viewer; actions are restricted by role.
 - **Input checks:** all public requests are validated (both REST and WebSocket).
-- **Protection:** rate limits on sensitive routes, brute-force protection, CORS allowed only from the trusted frontend domain `https://www.ai-editor-portfolio.com`.
+- **Protection:** rate limits on sensitive routes, brute-force protection, CORS allowed only from the trusted frontend domain https://www.ai-editor-portfolio.com.
 - **Email:** notifications and password reset via SMTP (Gmail).
 - **OAuth:** secure callback URLs for Google sign-in.
 
@@ -91,34 +92,32 @@ FrontEnd(Next.js) <-- realtime --> API
   - Unit: 29 suites, 249 tests, all passed (time ~7s).
   - e2e: 8 suites, 30 tests, all passed (time ~3.8s).
 
-- **When it runs:** on every PR and the `main` branch; CI publishes coverage & test summary.
+- **When it runs:** on every PR and the main branch; CI publishes coverage & test summary.
 
 ## 9) Checks & auto-deploy (CI/CD)
 
-- **Pipeline:** `lint → unit → e2e → build → DB migrations → deploy`.
-- **Environments:** `<dev / stage / prod>` (separate env vars).
-- **Releases:** versioning and quick rollback to a previous build `<>`.
+- **Pipeline:** lint → unit → e2e → build → DB migrations → deploy.
+- **Environments:** dev / test / prod> (separate env vars).
 
 ## 10) Deployment & hosting
 
-- **Where it runs:** Render (`ai-assistant-backend-fsdp`), auto-deploy from `main`.
-- **Database:** PostgreSQL (`<provider/plan>`).
+- **Where it runs:** Render https://ai-assistant-backend-fsdp.onrender.com, auto-deploy from main.
+- **Database:** PostgreSQL.
 - **Domains:** API — https://api.ai-editor-portfolio.com, frontend — https://www.ai-editor-portfolio.com
-- **Ports & health:** the app listens on 10000, health — `<GET /health>`.
+- **Ports & health:** the app listens on 10000, health — GET /health.
 
 ## 11) Roadmap & current limitsз
 
 **Coming soon:**
 
-- Multi-language export (`<languages>`).
+- Multi-language export.
 - Finer request limits by role.
 - AI metrics (per-function latency, token usage) and a small monitoring panel.
 - Better conflict resolution for concurrent editing.
 
 **Current limits:**
 
-- Export: `<EN-only>`.
-- Some AI actions have input size limits `<N>` (chars/tokens).
+- Export: EN-only.
 - Some editing bugs are caused by the deprecated techniques of the Quill editor
 - Public Swagger/OpenAPI docs are intentionally not included here.
 
