@@ -162,6 +162,7 @@ describe('InvitationGateway (websocket)', () => {
 
       let gotInvFromDashboard = false;
       let gotInvFromSession = false;
+
       const finish = () => {
         if (gotInvFromDashboard && gotInvFromSession) {
           clearTimeout(timer);

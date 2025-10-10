@@ -1,13 +1,20 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": false,
-    "incremental": true,
-    "noEmit": false,
+    "sourceMap": false,
     "tsBuildInfoFile": "./node_modules/.cache/nest/tsconfig.build.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "test", "dist", "**/*.spec.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "test",
+    "**/*.spec.ts",
+    "**/*.e2e-spec.ts"
+  ]
 }

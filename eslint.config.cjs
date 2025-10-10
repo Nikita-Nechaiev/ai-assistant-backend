@@ -1,23 +1,38 @@
 const tseslint = require('@typescript-eslint/eslint-plugin');
 const tsParser = require('@typescript-eslint/parser');
 const sonar = require('eslint-plugin-sonarjs');
-const eslintPluginPrettier = require('eslint-plugin-prettier');
+const prettier = require('eslint-plugin-prettier');
+const globals = require('globals');
 
 module.exports = [
   {
-    files: ['**/*.{ts,js}'],
-    ignores: ['eslint.config.cjs', 'dist/**', 'node_modules/**'],
+    ignores: ['node_modules/**', 'dist/**', 'coverage/**'],
+  },
+  {
+    files: ['jest.config.ts', '*.config.ts', '*.config.cjs'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: { project: false },
+      globals: globals.node,
+    },
+    plugins: { '@typescript-eslint': tseslint, sonarjs: sonar, prettier },
+    rules: {
+      quotes: ['warn', 'single', { allowTemplateLiterals: true }],
+      'object-shorthand': ['warn', 'always'],
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
+    },
+  },
+  {
+    files: ['src/**/*.ts', 'test/**/*.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
-        project: ['./tsconfig.json', './tsconfig.build.json'],
+        project: ['./tsconfig.eslint.json'],
+        tsconfigRootDir: __dirname,
       },
+      globals: { ...globals.node, ...globals.jest },
     },
-    plugins: {
-      '@typescript-eslint': tseslint,
-      sonarjs: sonar,
-      prettier: eslintPluginPrettier,
-    },
+    plugins: { '@typescript-eslint': tseslint, sonarjs: sonar, prettier },
     rules: {
       '@typescript-eslint/interface-name-prefix': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
@@ -35,8 +50,10 @@ module.exports = [
       'sonarjs/prefer-immediate-return': 'off',
       'sonarjs/prefer-single-boolean-return': 'off',
       'sonarjs/no-identical-functions': 'warn',
+
       quotes: ['warn', 'single', { allowTemplateLiterals: true }],
       'object-shorthand': ['warn', 'always'],
+
       'padding-line-between-statements': [
         'warn',
         { blankLine: 'always', prev: 'import', next: '*' },
@@ -55,30 +72,51 @@ module.exports = [
       '@typescript-eslint/naming-convention': [
         'warn',
         {
-          selector: 'variable',
-          format: ['PascalCase', 'UPPER_CASE'],
-          types: ['boolean'],
-          prefix: ['is', 'are', 'was', 'were', 'has', 'have', 'had', 'do', 'does', 'did', 'can', 'should'],
-        },
-        {
-          selector: 'variableLike',
-          format: ['camelCase', 'snake_case', 'UPPER_CASE', 'PascalCase'],
+          selector: 'parameter',
+          modifiers: ['unused'],
+          format: null,
+          leadingUnderscore: 'allow',
+          trailingUnderscore: 'allow',
         },
         {
           selector: 'parameter',
-          format: ['camelCase'],
+          format: null,
+          filter: { regex: '^_+$', match: true },
         },
         {
-          selector: 'typeLike',
-          format: ['PascalCase'],
-        },
-        {
-          selector: 'enumMember',
+          selector: 'variable',
           format: ['PascalCase', 'UPPER_CASE'],
+          types: ['boolean'],
+          prefix: ['is', 'are', 'was', 'were', 'has', 'have', 'had', 'do', 'does', 'did', 'can', 'should', 'got'],
         },
+        { selector: 'variableLike', format: ['camelCase', 'snake_case', 'UPPER_CASE', 'PascalCase'] },
+        { selector: 'parameter', format: ['camelCase'], leadingUnderscore: 'allow' },
+        { selector: 'typeLike', format: ['PascalCase'] },
+        { selector: 'enumMember', format: ['PascalCase', 'UPPER_CASE'] },
       ],
+
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
-    settings: {},
+  },
+
+  {
+    files: ['**/*.js'],
+    languageOptions: {
+      parserOptions: { ecmaVersion: 'latest', sourceType: 'commonjs' },
+      globals: globals.node,
+    },
+    plugins: { sonarjs: sonar, prettier },
+    rules: {
+      quotes: ['warn', 'single', { allowTemplateLiterals: true }],
+      'object-shorthand': ['warn', 'always'],
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
+    },
+  },
+
+  {
+    files: ['**/*.spec.ts', '**/*.e2e-spec.ts', 'test/**/*.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
   },
 ];
