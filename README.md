@@ -11,7 +11,7 @@ NestJS + PostgreSQL + WebSocket. Authentication, roles & access, real-time sessi
 
 ## 2) Quick links
 
-- **Production API:** https://api.ai-editor-portf olio.com
+- **Production API:** https://api.ai-editor-portfolio.com
 - **WebSocket:** https://api.ai-editor-portfolio.com/collaboration-session-socket
 - **Health:** https://api.ai-editor-portfolio.com/health
 - **Frontend:** https://www.ai-editor-portfolio.com
