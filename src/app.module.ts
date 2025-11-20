@@ -30,27 +30,51 @@ import { HealthModule } from './health/health.module';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
-        const dbUrl = cfg.get<string>('DATABASE_URL');
-
-        console.log('dbUrl', dbUrl);
-
-        if (!dbUrl) {
-          throw new Error('DATABASE_URL is not set');
-        }
-
+        const env = cfg.get<string>('NODE_ENV') ?? 'development';
+        const dbUrl = cfg.get<string>('DATABASE_URL') ?? '';
         const sslMode = (cfg.get<string>('DB_SSL_MODE') ?? 'auto').toLowerCase();
+
         const isLocalish = (url?: string) =>
           !!url && (/localhost/i.test(url) || /127\.0\.0\.1/.test(url) || /internal/i.test(url));
+
         const isNeedSSL = sslMode === 'require' || (sslMode === 'auto' && dbUrl && !isLocalish(dbUrl));
-        const ssl = isNeedSSL ? { rejectUnauthorized: false } : false;
+
+        if (dbUrl) {
+          const ssl = isNeedSSL ? { rejectUnauthorized: false } : false;
+
+          return {
+            type: 'postgres',
+            url: dbUrl,
+            autoLoadEntities: true,
+            synchronize: true,
+            ssl,
+            ...(isNeedSSL ? { extra: { ssl } } : {}),
+          };
+        }
+
+        if (env === 'test') {
+          return {
+            type: 'postgres',
+            host: cfg.get('PG_HOST') ?? 'localhost',
+            port: Number(cfg.get('PG_PORT') ?? 5433),
+            username: cfg.get('PG_USER') ?? 'test',
+            password: cfg.get('PG_PASS') ?? 'test',
+            database: cfg.get('PG_DB') ?? 'myapp_test',
+            autoLoadEntities: true,
+            synchronize: true,
+            dropSchema: true,
+          };
+        }
 
         return {
           type: 'postgres',
-          url: dbUrl,
+          host: cfg.get('POSTGRES_HOST') ?? 'localhost',
+          port: Number(cfg.get('POSTGRES_PORT') ?? 5432),
+          username: cfg.get('POSTGRES_USER') ?? 'postgres',
+          password: cfg.get('POSTGRES_PASSWORD') ?? 'postgres',
+          database: cfg.get('POSTGRES_DB') ?? 'myapp',
           autoLoadEntities: true,
           synchronize: true,
-          ssl,
-          ...(isNeedSSL ? { extra: { ssl } } : {}),
         };
       },
     }),

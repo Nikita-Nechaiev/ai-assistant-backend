@@ -6,7 +6,7 @@
     "rootDir": "./src",
     "declaration": false,
     "sourceMap": false,
-    "tsBuildInfoFile": "./node_modules/.cache/nest/tsconfig.build.tsbuildinfo"
+    "incremental": false
   },
   "include": ["src/**/*.ts"],
   "exclude": [
