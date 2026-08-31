@@ -6,6 +6,7 @@ import { User } from 'src/user/user.model';
 import { Document } from 'src/document/document.model';
 import OpenAI from 'openai';
 import { AiTool } from 'src/common/enums/enums';
+import { getErrorMessage } from 'src/common/utils/error-message.util';
 
 @Injectable()
 export class AiToolUsageService {
@@ -223,7 +224,7 @@ export class AiToolUsageService {
 
       return await this.aiToolUsageRepository.save(aiToolUsage);
     } catch (error) {
-      console.log(`${toolName} error:`, error.message);
+      console.log(`${toolName} error:`, getErrorMessage(error));
       throw new Error(`${toolName} failed.`);
     }
   }
@@ -253,7 +254,7 @@ export class AiToolUsageService {
         throw new Error('Invalid response format from AI.');
       }
     } catch (error) {
-      console.error('AnalyzeTextMetrics error:', error.message);
+      console.error('AnalyzeTextMetrics error:', getErrorMessage(error));
       throw new Error('Failed to analyze text metrics.');
     }
   }

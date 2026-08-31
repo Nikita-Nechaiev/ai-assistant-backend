@@ -9,6 +9,7 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { AiTool, Permission } from 'src/common/enums/enums';
 import { sessionRoom } from 'src/common/utils/room.util';
 import { SessionContextService } from 'src/common/utils/session-context.service';
+import { getErrorMessage } from 'src/common/utils/error-message.util';
 
 @WebSocketGateway({
   path: '/collaboration-session-socket',
@@ -40,7 +41,7 @@ export class DocumentGateway {
 
       this.emitToSession(sessionId, 'documentUpdated', updatedDocument);
     } catch (error) {
-      client.emit('error', error.message);
+      client.emit('error', getErrorMessage(error));
     }
   }
 
@@ -59,7 +60,7 @@ export class DocumentGateway {
       this.emitToSession(sessionId, 'documentCreated', newDocument);
       this.emitToSession(sessionId, 'versionCreated', version);
     } catch (error) {
-      client.emit('error', error.message);
+      client.emit('error', getErrorMessage(error));
     }
   }
 
@@ -72,7 +73,7 @@ export class DocumentGateway {
       await this.documentService.deleteDocument(data.documentId);
       this.emitToSession(sessionId, 'documentDeleted', { documentId: data.documentId });
     } catch (error) {
-      client.emit('error', error.message);
+      client.emit('error', getErrorMessage(error));
     }
   }
 
@@ -90,7 +91,7 @@ export class DocumentGateway {
       this.emitToSession(sessionId, 'documentDuplicated', duplicate);
       this.emitToSession(sessionId, 'versionCreated', version);
     } catch (error) {
-      client.emit('error', error.message);
+      client.emit('error', getErrorMessage(error));
     }
   }
 
@@ -101,7 +102,7 @@ export class DocumentGateway {
 
       client.emit('sessionDocuments', documents);
     } catch (error) {
-      client.emit('error', error.message);
+      client.emit('error', getErrorMessage(error));
     }
   }
 
@@ -123,7 +124,7 @@ export class DocumentGateway {
       this.emitToSession(sessionId, 'documentUpdated', updatedDocument);
       this.emitToSession(sessionId, 'versionCreated', version);
     } catch (error) {
-      client.emit('error', error.message);
+      client.emit('error', getErrorMessage(error));
     }
   }
 
@@ -145,7 +146,7 @@ export class DocumentGateway {
       this.emitToSession(sessionId, 'documentUpdated', updatedDocument);
       this.emitToSession(sessionId, 'versionCreated', version);
     } catch (error) {
-      client.emit('error', error.message);
+      client.emit('error', getErrorMessage(error));
     }
   }
 
@@ -173,7 +174,7 @@ export class DocumentGateway {
       client.emit('documentData', updatedDocument);
       client.emit('lastEditedDocument', updatedDocument);
     } catch (error) {
-      client.emit('invalidDocument', { message: error.message, documentId: data.documentId });
+      client.emit('invalidDocument', { message: getErrorMessage(error), documentId: data.documentId });
     }
   }
 
@@ -190,7 +191,7 @@ export class DocumentGateway {
 
       this.emitToSession(sessionId, 'documentAiUsage', usage);
     } catch (error) {
-      client.emit('error', error.message);
+      client.emit('error', getErrorMessage(error));
     }
   }
 
@@ -205,7 +206,7 @@ export class DocumentGateway {
 
       this.emitToSession(sessionId, 'documentAiUsageCreated', usage);
     } catch (error) {
-      client.emit('error', error.message);
+      client.emit('error', getErrorMessage(error));
     }
   }
 
@@ -217,7 +218,7 @@ export class DocumentGateway {
 
       client.emit('versionsData', versions);
     } catch (error) {
-      client.emit('error', error.message);
+      client.emit('error', getErrorMessage(error));
     }
   }
 }

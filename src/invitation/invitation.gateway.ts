@@ -7,6 +7,7 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { NotificationStatus, Permission } from 'src/common/enums/enums';
 import { dashboardRoom, sessionRoom } from 'src/common/utils/room.util';
 import { CreateInvitationUseCase } from './use-cases/create-invitation.usecase';
+import { getErrorMessage } from 'src/common/utils/error-message.util';
 
 @WebSocketGateway({
   path: '/collaboration-session-socket',
@@ -60,8 +61,10 @@ export class InvitationGateway {
       this.server.to(sessionRoom(updatedInvitation.session.id)).emit('invitationUpdated', updatedInvitation);
       this.server.to(dashboardRoom(userId)).emit('invitationUpdated', updatedInvitation);
     } catch (error) {
-      this.logger.error(error.message);
-      client.emit('error', error.message);
+      const message = getErrorMessage(error);
+
+      this.logger.error(message);
+      client.emit('error', message);
     }
   }
 
@@ -84,8 +87,10 @@ export class InvitationGateway {
         .to(dashboardRoom(invitation.receiver.id))
         .emit('notificationDeleted', { invitationId: data.invitationId });
     } catch (error) {
-      this.logger.error(error.message);
-      client.emit('error', error.message);
+      const message = getErrorMessage(error);
+
+      this.logger.error(message);
+      client.emit('error', message);
     }
   }
 
@@ -107,8 +112,10 @@ export class InvitationGateway {
       await this.invitationService.delete(invitation.id);
       this.server.to(sessionRoom(invitation.session.id)).emit('notificationDeleted', { invitationId: invitation.id });
     } catch (error) {
-      this.logger.error(error.message);
-      client.emit('error', error.message);
+      const message = getErrorMessage(error);
+
+      this.logger.error(message);
+      client.emit('error', message);
     }
   }
 
@@ -127,8 +134,10 @@ export class InvitationGateway {
       this.server.to(dashboardRoom(invitation.receiver.id)).emit('newInvitation', invitation);
       this.server.to(sessionRoom(sessionId)).emit('newInvitation', invitation);
     } catch (error) {
-      this.logger.error(error.message);
-      client.emit('error', error.message);
+      const message = getErrorMessage(error);
+
+      this.logger.error(message);
+      client.emit('error', message);
     }
   }
 
@@ -140,8 +149,10 @@ export class InvitationGateway {
 
       client.emit('invitations', invitations);
     } catch (error) {
-      this.logger.error(error.message);
-      client.emit('error', error.message);
+      const message = getErrorMessage(error);
+
+      this.logger.error(message);
+      client.emit('error', message);
     }
   }
 
@@ -157,8 +168,10 @@ export class InvitationGateway {
       this.server.to(sessionRoom(updatedInvitation.session.id)).emit('invitationUpdated', updatedInvitation);
       this.server.to(dashboardRoom(updatedInvitation.receiver.id)).emit('invitationUpdated', updatedInvitation);
     } catch (error) {
-      this.logger.error(error.message);
-      client.emit('error', error.message);
+      const message = getErrorMessage(error);
+
+      this.logger.error(message);
+      client.emit('error', message);
     }
   }
 }

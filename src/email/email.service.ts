@@ -1,5 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import { Injectable } from '@nestjs/common';
+import { getErrorMessage } from 'src/common/utils/error-message.util';
 
 @Injectable()
 export class EmailService {
@@ -29,7 +30,7 @@ export class EmailService {
     try {
       const info = await this.transporter.sendMail(mailOptions);
     } catch (error) {
-      console.log(`Failed to send email: ${error.message}`);
+      console.log(`Failed to send email: ${getErrorMessage(error)}`);
       throw new Error('Email delivery failed');
     }
   }
