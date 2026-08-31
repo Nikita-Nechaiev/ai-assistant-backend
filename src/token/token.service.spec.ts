@@ -77,6 +77,14 @@ describe('TokenService', () => {
     expect(repo.delete).toHaveBeenCalledWith({ refreshToken: 'dead' });
   });
 
+  it('removes token by user id', async () => {
+    repo.delete.mockResolvedValue({ affected: 1 } as any);
+
+    await service.removeTokenByUserId(9);
+
+    expect(repo.delete).toHaveBeenCalledWith({ userId: 9 });
+  });
+
   describe('validateRefreshToken', () => {
     it('returns payload when verify succeeds', () => {
       jwtMock.verify.mockReturnValue({ sub: 1 });

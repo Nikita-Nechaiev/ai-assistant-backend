@@ -110,6 +110,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
+    const tokenFromDb = await this.tokenService.findToken(refreshToken);
+
+    if (!tokenFromDb) {
+      await this.tokenService.removeTokenByUserId(userData.sub);
+
+      throw new UnauthorizedException('Refresh token was reused or revoked');
+    }
+
     const user = await this.usersService.findById(userData.sub);
 
     if (!user) {

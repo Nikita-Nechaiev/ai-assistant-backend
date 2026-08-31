@@ -43,6 +43,10 @@ export class TokenService {
     return await this.tokenRepository.delete({ refreshToken });
   }
 
+  async removeTokenByUserId(userId: number) {
+    return await this.tokenRepository.delete({ userId });
+  }
+
   validateRefreshToken(refreshToken: string) {
     try {
       const userData = this.jwtService.verify(refreshToken, {

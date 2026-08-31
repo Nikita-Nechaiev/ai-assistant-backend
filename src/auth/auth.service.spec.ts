@@ -31,7 +31,9 @@ const tokenMock = {
   generateTokens: jest.fn().mockReturnValue({ accessToken: 'acc', refreshToken: 'ref' }),
   saveToken: jest.fn(),
   removeToken: jest.fn(),
+  removeTokenByUserId: jest.fn(),
   validateRefreshToken: jest.fn(),
+  findToken: jest.fn(),
 };
 
 describe('AuthService', () => {
@@ -101,11 +103,13 @@ describe('AuthService', () => {
   describe('refresh', () => {
     it('issues new tokens', async () => {
       tokenMock.validateRefreshToken.mockReturnValue({ sub: 1 });
+      tokenMock.findToken.mockResolvedValueOnce({ refreshToken: 'oldRef' });
       usersMock.findById.mockResolvedValue(userFixture);
 
       const res = await service.refresh('oldRef');
 
       expect(tokenMock.validateRefreshToken).toHaveBeenCalledWith('oldRef');
+      expect(tokenMock.findToken).toHaveBeenCalledWith('oldRef');
       expect(res.accessToken).toBe('acc');
     });
 
@@ -113,6 +117,16 @@ describe('AuthService', () => {
       tokenMock.validateRefreshToken.mockReturnValue(null);
 
       await expect(service.refresh('broken')).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(tokenMock.findToken).not.toHaveBeenCalled();
+    });
+
+    it('revokes active token when a valid refresh token is reused or already revoked', async () => {
+      tokenMock.validateRefreshToken.mockReturnValue({ sub: 1 });
+      tokenMock.findToken.mockResolvedValueOnce(null);
+
+      await expect(service.refresh('oldRef')).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(tokenMock.removeTokenByUserId).toHaveBeenCalledWith(1);
+      expect(usersMock.findById).not.toHaveBeenCalled();
     });
   });
 

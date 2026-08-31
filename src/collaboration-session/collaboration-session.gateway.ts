@@ -23,6 +23,7 @@ import { Permission } from 'src/common/enums/enums';
 import { User } from 'src/user/user.model';
 import { dashboardRoom, sessionRoom } from 'src/common/utils/room.util';
 import { CollaborationSessionService } from './collaboration-session.service';
+import { getErrorMessage } from 'src/common/utils/error-message.util';
 
 @WebSocketGateway({
   path: '/collaboration-session-socket',
@@ -57,7 +58,7 @@ export class CollaborationSessionGateway implements OnGatewayInit, OnGatewayConn
       try {
         decoded = verify(access, process.env.JWT_ACCESS_SECRET);
       } catch (e) {
-        if (e.name === 'TokenExpiredError') {
+        if (e instanceof Error && e.name === 'TokenExpiredError') {
           const tokens = await this.authService.refresh(refresh);
 
           access = tokens.accessToken;
@@ -65,14 +66,14 @@ export class CollaborationSessionGateway implements OnGatewayInit, OnGatewayConn
           decoded = verify(access, process.env.JWT_ACCESS_SECRET);
           client.handshake.headers.cookie = `accessToken=${access}; refreshToken=${refresh}`;
         } else {
-          throw new UnauthorizedException(e.message);
+          throw new UnauthorizedException(getErrorMessage(e));
         }
       }
 
       client.data.userId = Number(decoded.sub);
       client.join(dashboardRoom(client.data.userId));
     } catch (e) {
-      this.logger.error(`Unauthorised socket: ${e.message}`);
+      this.logger.error(`Unauthorised socket: ${getErrorMessage(e)}`);
       client.disconnect();
     }
   }

@@ -12,8 +12,7 @@
     "skipLibCheck": true,
     "incremental": true,
 
-    "baseUrl": ".",
-    "paths": { "src/*": ["src/*"] }, 
+    "paths": { "src/*": ["./src/*"] },
 
     "types": ["node", "jest", "express", "multer"],
 
