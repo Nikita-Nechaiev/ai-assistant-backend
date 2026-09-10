@@ -28,6 +28,12 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  private generateTokens(user: Partial<User>) {
+    const payload = { sub: user.id, email: user.email };
+
+    return this.tokenService.generateTokens(payload);
+  }
+
   async validateUser(email: string, password: string): Promise<null | Partial<User>> {
     const user = await this.usersService.findByEmail(email);
 
@@ -110,11 +116,61 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
+    const user = await this.usersService.findById(userData.sub);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const tokens = this.generateTokens(user);
+    const isRotated = await this.tokenService.rotateToken(user.id, refreshToken, tokens.refreshToken);
+
+    if (!isRotated) {
+      throw new UnauthorizedException('Refresh token was reused or revoked');
+    }
+
+    return {
+      ...tokens,
+      user: this.sanitizeUser(user),
+    };
+  }
+
+  async refreshAccess(refreshToken: string): Promise<{
+    accessToken: string;
+    user: Partial<User>;
+  }> {
+    const user = await this.getUserFromRefreshToken(refreshToken);
+    const accessToken = this.tokenService.generateAccessToken({ sub: user.id, email: user.email });
+
+    return { accessToken, user };
+  }
+
+  async getMe(accessToken: string): Promise<Partial<User>> {
+    const userData = this.tokenService.validateAccessToken(accessToken);
+
+    if (!userData) {
+      throw new UnauthorizedException('Invalid access token');
+    }
+
+    const user = await this.usersService.findById(userData.sub);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.sanitizeUser(user);
+  }
+
+  async getUserFromRefreshToken(refreshToken: string): Promise<Partial<User>> {
+    const userData = this.tokenService.validateRefreshToken(refreshToken);
+
+    if (!userData) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
     const tokenFromDb = await this.tokenService.findToken(refreshToken);
 
     if (!tokenFromDb) {
-      await this.tokenService.removeTokenByUserId(userData.sub);
-
       throw new UnauthorizedException('Refresh token was reused or revoked');
     }
 
@@ -124,12 +180,7 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    const tokens = await this.generateAndSaveTokens(user);
-
-    return {
-      ...tokens,
-      user: this.sanitizeUser(user),
-    };
+    return this.sanitizeUser(user);
   }
 
   async oauthLogin(user: User) {

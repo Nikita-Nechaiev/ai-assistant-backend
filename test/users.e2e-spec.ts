@@ -54,8 +54,8 @@ describe('Users module (e2e)', () => {
     const raw = loginRes.headers['set-cookie'] ?? [];
     const cookies = Array.isArray(raw) ? raw : [raw];
 
-    accessCookie = cookies.find((c) => c.startsWith('accessToken='))!;
-    refreshCookie = cookies.find((c) => c.startsWith('refreshToken='))!;
+    accessCookie = cookies.find((c) => c.startsWith('accessToken='))!.split(';')[0];
+    refreshCookie = cookies.find((c) => c.startsWith('refreshToken='))!.split(';')[0];
   });
 
   const authCookies = () => `${accessCookie}; ${refreshCookie}`;
@@ -72,7 +72,7 @@ describe('Users module (e2e)', () => {
   });
 
   it('PATCH /users/profile (unauthenticated) → 401', async () => {
-    await agent.patch('/users/profile').send({ name: 'Should fail' }).expect(401);
+    await request(app.getHttpServer()).patch('/users/profile').send({ name: 'Should fail' }).expect(401);
   });
 
   it('PATCH /users/profile (authenticated) → 200 & updates fields', async () => {

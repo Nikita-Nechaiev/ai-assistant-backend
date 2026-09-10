@@ -48,34 +48,51 @@ export class CollaborationSessionGateway implements OnGatewayInit, OnGatewayConn
   async handleConnection(@ConnectedSocket() client: Socket) {
     try {
       const cookies = parse(client.handshake.headers.cookie ?? '');
-      let access = cookies['accessToken'];
-      let refresh = cookies['refreshToken'];
+      const access = cookies['accessToken'];
+      const refresh = cookies['refreshToken'];
 
-      if (!access || !refresh) throw new UnauthorizedException('Missing tokens');
+      if (!access && !refresh) throw new UnauthorizedException('Missing tokens');
 
       let decoded: any;
 
-      try {
-        decoded = verify(access, process.env.JWT_ACCESS_SECRET);
-      } catch (e) {
-        if (e instanceof Error && e.name === 'TokenExpiredError') {
-          const tokens = await this.authService.refresh(refresh);
-
-          access = tokens.accessToken;
-          refresh = tokens.refreshToken;
+      if (access) {
+        try {
           decoded = verify(access, process.env.JWT_ACCESS_SECRET);
-          client.handshake.headers.cookie = `accessToken=${access}; refreshToken=${refresh}`;
-        } else {
-          throw new UnauthorizedException(getErrorMessage(e));
+        } catch (e) {
+          if (!(e instanceof Error && e.name === 'TokenExpiredError' && refresh)) {
+            throw new UnauthorizedException(getErrorMessage(e));
+          }
         }
+      }
+
+      if (!decoded && refresh) {
+        const user = await this.authService.getUserFromRefreshToken(refresh);
+
+        if (!user.id) {
+          throw new UnauthorizedException('User not found');
+        }
+
+        decoded = { sub: user.id };
       }
 
       client.data.userId = Number(decoded.sub);
       client.join(dashboardRoom(client.data.userId));
     } catch (e) {
-      this.logger.error(`Unauthorised socket: ${getErrorMessage(e)}`);
+      this.logConnectionError(e);
       client.disconnect();
     }
+  }
+
+  private logConnectionError(error: unknown) {
+    const message = `Unauthorised socket: ${getErrorMessage(error)}`;
+
+    if (error instanceof UnauthorizedException) {
+      this.logger.warn(message);
+
+      return;
+    }
+
+    this.logger.error(message);
   }
 
   async handleDisconnect(@ConnectedSocket() client: Socket) {

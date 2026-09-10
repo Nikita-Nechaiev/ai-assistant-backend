@@ -32,7 +32,7 @@ function fakeServer() {
   return svr;
 }
 
-const authMock = { refresh: jest.fn() };
+const authMock = { refresh: jest.fn(), getUserFromRefreshToken: jest.fn() };
 const presenceMock = {
   leave: jest.fn(),
   join: jest.fn(),
@@ -271,7 +271,7 @@ describe('CollabGateway handleConnection', () => {
     expect(sock.disconnect).not.toHaveBeenCalled();
   });
 
-  it('refreshes tokens on expiry and still joins', async () => {
+  it('identifies socket through refresh token when access token is expired', async () => {
     const gw = buildGateway();
     const sock = fakeSocket('sock-exp', 7);
 
@@ -281,21 +281,32 @@ describe('CollabGateway handleConnection', () => {
 
     tokenErr.name = 'TokenExpiredError';
 
-    verifyMock
-      .mockImplementationOnce(() => {
-        throw tokenErr;
-      })
-      .mockReturnValueOnce({ sub: 7 });
-
-    authMock.refresh.mockResolvedValue({
-      accessToken: 'newAcc',
-      refreshToken: 'newRef',
+    verifyMock.mockImplementationOnce(() => {
+      throw tokenErr;
     });
+    authMock.getUserFromRefreshToken.mockResolvedValueOnce({ id: 7 });
 
     await gw.handleConnection(sock as any);
 
-    expect(authMock.refresh).toHaveBeenCalledWith('refresh-x');
-    expect(sock.handshake.headers.cookie).toContain('accessToken=newAcc');
+    expect(authMock.refresh).not.toHaveBeenCalled();
+    expect(authMock.getUserFromRefreshToken).toHaveBeenCalledWith('refresh-x');
+    expect(sock.disconnect).not.toHaveBeenCalled();
+    expect(sock.join).toHaveBeenCalledWith('dashboard_7');
+  });
+
+  it('identifies socket through refresh token when access token is missing', async () => {
+    const gw = buildGateway();
+    const sock = fakeSocket('sock-refresh-only', 7);
+
+    sock.handshake.headers.cookie = 'refreshToken=refresh-only';
+    authMock.getUserFromRefreshToken.mockResolvedValueOnce({ id: 7 });
+
+    await gw.handleConnection(sock as any);
+
+    expect(verifyMock).not.toHaveBeenCalled();
+    expect(authMock.refresh).not.toHaveBeenCalled();
+    expect(authMock.getUserFromRefreshToken).toHaveBeenCalledWith('refresh-only');
+    expect(sock.disconnect).not.toHaveBeenCalled();
     expect(sock.join).toHaveBeenCalledWith('dashboard_7');
   });
 
