@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
+import { randomUUID } from 'crypto';
 import { Token } from './token.model';
 
 @Injectable()
@@ -13,16 +14,26 @@ export class TokenService {
   ) {}
 
   generateTokens(payload: any) {
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: '60m',
-    });
+    const accessToken = this.generateAccessToken(payload);
 
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: '30d',
-    });
+    const refreshToken = this.jwtService.sign(
+      { ...payload, jti: randomUUID() },
+      {
+        secret: process.env.JWT_REFRESH_SECRET,
+        expiresIn: '30d',
+      },
+    );
 
     return { accessToken, refreshToken };
+  }
+
+  generateAccessToken(payload: any) {
+    return this.jwtService.sign(
+      { ...payload, jti: randomUUID() },
+      {
+        expiresIn: '15m',
+      },
+    );
   }
 
   async saveToken(userId: number, refreshToken: string) {
@@ -37,6 +48,15 @@ export class TokenService {
     const token = this.tokenRepository.create({ userId, refreshToken });
 
     return this.tokenRepository.save(token);
+  }
+
+  async rotateToken(userId: number, oldRefreshToken: string, newRefreshToken: string) {
+    const result = await this.tokenRepository.update(
+      { userId, refreshToken: oldRefreshToken },
+      { refreshToken: newRefreshToken },
+    );
+
+    return (result.affected ?? 0) > 0;
   }
 
   async removeToken(refreshToken: string) {

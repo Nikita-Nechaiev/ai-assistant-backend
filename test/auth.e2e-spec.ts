@@ -10,6 +10,16 @@ describe('Auth module (e2e)', () => {
 
   let refreshCookie = '';
 
+  const captureRefreshCookie = (res: request.Response) => {
+    const raw = res.headers['set-cookie'];
+    const cookies = Array.isArray(raw) ? raw : [raw ?? ''];
+    const nextRefreshCookie = cookies.find((c) => c.startsWith('refreshToken='));
+
+    if (nextRefreshCookie) {
+      refreshCookie = nextRefreshCookie.split(';')[0];
+    }
+  };
+
   beforeAll(async () => {
     const modRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -23,7 +33,7 @@ describe('Auth module (e2e)', () => {
     agent = request.agent(app.getHttpServer());
   });
 
-  afterAll(() => app.close());
+  afterAll(() => app?.close());
 
   const now = Date.now();
   const user = {
@@ -51,24 +61,31 @@ describe('Auth module (e2e)', () => {
       .attach('avatar', fakeJpeg, 'avatar.jpg')
       .expect(201);
 
-    const raw = res.headers['set-cookie'];
-    const cookies = Array.isArray(raw) ? raw : [raw ?? ''];
-
-    refreshCookie = cookies.find((c) => c.startsWith('refreshToken='))!;
+    captureRefreshCookie(res);
 
     expect(res.body.user.email).toBe(user.email);
   });
 
   it('POST /auth/login → 200', async () => {
-    await agent.post('/auth/login').send({ email: user.email, password: user.password }).expect(200);
+    const res = await agent.post('/auth/login').send({ email: user.email, password: user.password }).expect(200);
+
+    captureRefreshCookie(res);
   });
 
-  it('GET /auth/get-tokens → 200', async () => {
-    await agent.get('/auth/get-tokens').set('Cookie', refreshCookie).expect(200);
+  it('GET /auth/me → 200', async () => {
+    await agent.get('/auth/me').expect(200);
   });
 
-  it('GET /auth/refresh-cookies → 200', async () => {
-    await agent.get('/auth/refresh-cookies').set('Cookie', refreshCookie).expect(200);
+  it('POST /auth/refresh → 200', async () => {
+    const res = await agent.post('/auth/refresh').set('Cookie', refreshCookie).expect(200);
+
+    captureRefreshCookie(res);
+  });
+
+  it('POST /auth/refresh-cookies → 200', async () => {
+    const res = await agent.post('/auth/refresh-cookies').set('Cookie', refreshCookie).expect(200);
+
+    captureRefreshCookie(res);
   });
 
   it('POST /auth/logout → 200', async () => {

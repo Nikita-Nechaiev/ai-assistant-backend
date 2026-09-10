@@ -25,6 +25,11 @@ const mockAuthService = {
     accessToken: 'access-n',
     user: { id: 1 },
   }),
+  refreshAccess: jest.fn().mockResolvedValue({
+    accessToken: 'access-n',
+    user: { id: 1 },
+  }),
+  getMe: jest.fn().mockResolvedValue({ id: 1, email: 'user@mail.com' }),
   sendResetPasswordLink: jest.fn().mockResolvedValue({ ok: true }),
   resetPassword: jest.fn().mockResolvedValue({ ok: true }),
   oauthLogin: jest.fn().mockResolvedValue({
@@ -116,9 +121,9 @@ describe('AuthController e2e-style', () => {
     await request(app.getHttpServer()).post('/auth/logout').expect(401);
   });
 
-  it('GET /auth/refresh-cookies issues new cookies', async () => {
+  it('POST /auth/refresh-cookies issues new cookies', async () => {
     const res = await request(app.getHttpServer())
-      .get('/auth/refresh-cookies')
+      .post('/auth/refresh-cookies')
       .set('Cookie', ['refreshToken=refresh-old'])
       .expect(200);
 
@@ -131,25 +136,39 @@ describe('AuthController e2e-style', () => {
     );
   });
 
-  it('GET /auth/refresh-cookies without cookie → 401', async () => {
-    await request(app.getHttpServer()).get('/auth/refresh-cookies').expect(401);
+  it('POST /auth/refresh-cookies without cookie → 401', async () => {
+    await request(app.getHttpServer()).post('/auth/refresh-cookies').expect(401);
   });
 
-  it('GET /auth/get-tokens returns tokens & user', async () => {
+  it('POST /auth/refresh returns access token & user and sets cookies', async () => {
     const res = await request(app.getHttpServer())
-      .get('/auth/get-tokens')
+      .post('/auth/refresh')
       .set('Cookie', ['refreshToken=refresh-old'])
       .expect(200);
 
+    expect(mockAuthService.refreshAccess).toHaveBeenCalledWith('refresh-old');
     expect(res.body).toEqual({
       accessToken: 'access-n',
-      newRefreshToken: 'refresh-n',
       user: { id: 1 },
     });
+    expect(res.headers['set-cookie']).toEqual(
+      expect.arrayContaining([expect.stringContaining('accessToken=access-n')]),
+    );
   });
 
-  it('GET /auth/get-tokens without cookie → 401', async () => {
-    await request(app.getHttpServer()).get('/auth/get-tokens').expect(401);
+  it('POST /auth/refresh without cookie → 401', async () => {
+    await request(app.getHttpServer()).post('/auth/refresh').expect(401);
+  });
+
+  it('GET /auth/me returns current user from access cookie', async () => {
+    const res = await request(app.getHttpServer()).get('/auth/me').set('Cookie', ['accessToken=access-x']).expect(200);
+
+    expect(mockAuthService.getMe).toHaveBeenCalledWith('access-x');
+    expect(res.body).toEqual({ id: 1, email: 'user@mail.com' });
+  });
+
+  it('GET /auth/me without cookie → 401', async () => {
+    await request(app.getHttpServer()).get('/auth/me').expect(401);
   });
 
   it('POST /auth/forgot-password triggers email send', async () => {

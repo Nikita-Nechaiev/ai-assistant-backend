@@ -20,11 +20,11 @@ export class SessionPresenceService {
     const socketId = client.id;
     const userId = client.data.userId;
 
-    this.state.socketSessionMap.set(socketId, sessionId);
-
     const userSession = await this.userSessionService.findByUserAndSession(userId, sessionId);
 
     if (!userSession) return { isAllowed: false };
+
+    this.state.socketSessionMap.set(socketId, sessionId);
 
     const existingOnline = this.state.onlineUsers.get(userId);
     let isFirstJoin = false;
@@ -120,18 +120,24 @@ export class SessionPresenceService {
     const initialSeconds = Number(userSession.timeSpent);
     const now = Date.now();
     const online = this.state.onlineUsers.get(userId);
+    const isJoinedToSession = this.state.socketSessionMap.get(socketId) === sessionId;
 
     let totalTime = initialSeconds;
 
     if (!online) {
-      this.state.onlineUsers.set(userId, {
-        sessionId,
-        startTime: now,
-        socketIds: new Set([socketId]),
-      });
-    } else {
+      if (isJoinedToSession) {
+        this.state.onlineUsers.set(userId, {
+          sessionId,
+          startTime: now,
+          socketIds: new Set([socketId]),
+        });
+      }
+    } else if (online.sessionId === sessionId) {
       totalTime += (now - online.startTime) / 1000;
-      online.socketIds.add(socketId);
+
+      if (isJoinedToSession) {
+        online.socketIds.add(socketId);
+      }
     }
 
     return totalTime;

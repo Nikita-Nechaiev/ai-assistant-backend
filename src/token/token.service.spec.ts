@@ -10,6 +10,7 @@ const repoFactory = () => ({
   create: jest.fn(),
   save: jest.fn(),
   delete: jest.fn(),
+  update: jest.fn(),
 });
 
 const jwtMock = {
@@ -43,12 +44,21 @@ describe('TokenService', () => {
 
     const res = service.generateTokens(payload);
 
-    expect(jwtMock.sign).toHaveBeenNthCalledWith(1, payload, { expiresIn: '60m' });
-    expect(jwtMock.sign).toHaveBeenNthCalledWith(2, payload, {
+    expect(jwtMock.sign).toHaveBeenNthCalledWith(1, expect.objectContaining(payload), { expiresIn: '15m' });
+    expect(jwtMock.sign).toHaveBeenNthCalledWith(2, expect.objectContaining(payload), {
       secret: process.env.JWT_REFRESH_SECRET,
       expiresIn: '30d',
     });
     expect(res).toEqual({ accessToken: 'acc', refreshToken: 'ref' });
+  });
+
+  it('generates an access token with the short expiration', () => {
+    jwtMock.sign.mockReturnValueOnce('acc');
+
+    const payload = { sub: 1 };
+
+    expect(service.generateAccessToken(payload)).toBe('acc');
+    expect(jwtMock.sign).toHaveBeenCalledWith(expect.objectContaining(payload), { expiresIn: '15m' });
   });
 
   it('updates existing token row', async () => {
@@ -75,6 +85,21 @@ describe('TokenService', () => {
 
     await service.removeToken('dead');
     expect(repo.delete).toHaveBeenCalledWith({ refreshToken: 'dead' });
+  });
+
+  it('rotates token only when old refresh token matches', async () => {
+    repo.update.mockResolvedValue({ affected: 1 } as any);
+
+    const wasRotated = await service.rotateToken(5, 'oldRef', 'newRef');
+
+    expect(repo.update).toHaveBeenCalledWith({ userId: 5, refreshToken: 'oldRef' }, { refreshToken: 'newRef' });
+    expect(wasRotated).toBe(true);
+  });
+
+  it('returns false when rotate token did not update a row', async () => {
+    repo.update.mockResolvedValue({ affected: 0 } as any);
+
+    await expect(service.rotateToken(5, 'oldRef', 'newRef')).resolves.toBe(false);
   });
 
   it('removes token by user id', async () => {

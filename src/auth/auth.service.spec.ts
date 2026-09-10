@@ -29,11 +29,14 @@ const fileMock = { saveAvatarFile: jest.fn().mockResolvedValue('/img.png') };
 const emailMock = { sendResetPasswordEmail: jest.fn() };
 const tokenMock = {
   generateTokens: jest.fn().mockReturnValue({ accessToken: 'acc', refreshToken: 'ref' }),
+  generateAccessToken: jest.fn().mockReturnValue('access-only'),
   saveToken: jest.fn(),
   removeToken: jest.fn(),
   removeTokenByUserId: jest.fn(),
   validateRefreshToken: jest.fn(),
+  validateAccessToken: jest.fn(),
   findToken: jest.fn(),
+  rotateToken: jest.fn(),
 };
 
 describe('AuthService', () => {
@@ -103,13 +106,13 @@ describe('AuthService', () => {
   describe('refresh', () => {
     it('issues new tokens', async () => {
       tokenMock.validateRefreshToken.mockReturnValue({ sub: 1 });
-      tokenMock.findToken.mockResolvedValueOnce({ refreshToken: 'oldRef' });
+      tokenMock.rotateToken.mockResolvedValueOnce(true);
       usersMock.findById.mockResolvedValue(userFixture);
 
       const res = await service.refresh('oldRef');
 
       expect(tokenMock.validateRefreshToken).toHaveBeenCalledWith('oldRef');
-      expect(tokenMock.findToken).toHaveBeenCalledWith('oldRef');
+      expect(tokenMock.rotateToken).toHaveBeenCalledWith(1, 'oldRef', 'ref');
       expect(res.accessToken).toBe('acc');
     });
 
@@ -117,15 +120,74 @@ describe('AuthService', () => {
       tokenMock.validateRefreshToken.mockReturnValue(null);
 
       await expect(service.refresh('broken')).rejects.toBeInstanceOf(UnauthorizedException);
-      expect(tokenMock.findToken).not.toHaveBeenCalled();
+      expect(usersMock.findById).not.toHaveBeenCalled();
     });
 
-    it('revokes active token when a valid refresh token is reused or already revoked', async () => {
+    it('throws when refresh token was reused or already revoked', async () => {
       tokenMock.validateRefreshToken.mockReturnValue({ sub: 1 });
-      tokenMock.findToken.mockResolvedValueOnce(null);
+      tokenMock.rotateToken.mockResolvedValueOnce(false);
+      usersMock.findById.mockResolvedValue(userFixture);
 
       await expect(service.refresh('oldRef')).rejects.toBeInstanceOf(UnauthorizedException);
-      expect(tokenMock.removeTokenByUserId).toHaveBeenCalledWith(1);
+      expect(tokenMock.removeTokenByUserId).not.toHaveBeenCalled();
+      expect(tokenMock.rotateToken).toHaveBeenCalledWith(1, 'oldRef', 'ref');
+    });
+  });
+
+  describe('getMe', () => {
+    it('returns sanitized user for valid access token', async () => {
+      tokenMock.validateAccessToken.mockReturnValue({ sub: 1 });
+      usersMock.findById.mockResolvedValue(userFixture);
+
+      const res = await service.getMe('access');
+
+      expect(tokenMock.validateAccessToken).toHaveBeenCalledWith('access');
+      expect(usersMock.findById).toHaveBeenCalledWith(1);
+      expect(res).toEqual({ ...userFixture, passwordHash: undefined });
+    });
+
+    it('throws for invalid access token', async () => {
+      tokenMock.validateAccessToken.mockReturnValue(null);
+
+      await expect(service.getMe('broken')).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(usersMock.findById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('refreshAccess', () => {
+    it('issues only a new access token for a persisted refresh token', async () => {
+      tokenMock.validateRefreshToken.mockReturnValue({ sub: 1 });
+      tokenMock.findToken.mockResolvedValue({ userId: 1, refreshToken: 'refresh' });
+      usersMock.findById.mockResolvedValue(userFixture);
+
+      const res = await service.refreshAccess('refresh');
+
+      expect(tokenMock.findToken).toHaveBeenCalledWith('refresh');
+      expect(tokenMock.generateAccessToken).toHaveBeenCalledWith({ sub: 1, email: 'u@mail.com' });
+      expect(tokenMock.rotateToken).not.toHaveBeenCalled();
+      expect(res).toEqual({ accessToken: 'access-only', user: { ...userFixture, passwordHash: undefined } });
+    });
+  });
+
+  describe('getUserFromRefreshToken', () => {
+    it('returns sanitized user for a persisted refresh token without rotating it', async () => {
+      tokenMock.validateRefreshToken.mockReturnValue({ sub: 1 });
+      tokenMock.findToken.mockResolvedValue({ userId: 1, refreshToken: 'refresh' });
+      usersMock.findById.mockResolvedValue(userFixture);
+
+      const res = await service.getUserFromRefreshToken('refresh');
+
+      expect(tokenMock.validateRefreshToken).toHaveBeenCalledWith('refresh');
+      expect(tokenMock.findToken).toHaveBeenCalledWith('refresh');
+      expect(tokenMock.rotateToken).not.toHaveBeenCalled();
+      expect(res).toEqual({ ...userFixture, passwordHash: undefined });
+    });
+
+    it('throws when refresh token is valid but not persisted', async () => {
+      tokenMock.validateRefreshToken.mockReturnValue({ sub: 1 });
+      tokenMock.findToken.mockResolvedValue(null);
+
+      await expect(service.getUserFromRefreshToken('reused')).rejects.toBeInstanceOf(UnauthorizedException);
       expect(usersMock.findById).not.toHaveBeenCalled();
     });
   });

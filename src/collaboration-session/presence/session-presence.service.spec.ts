@@ -70,6 +70,29 @@ describe('SessionPresenceService', () => {
       expect(state.onlineUsers.has(5)).toBeTruthy();
       expect(state.socketSessionMap.get('s1')).toBe(20);
     });
+
+    it('still treats join as first join after a pre-join snapshot request', async () => {
+      ucsMock.findByUserAndSession.mockResolvedValue({
+        user: { id: 5, name: 'A', email: 'a@mail', avatar: 'x' },
+        permissions: [Permission.READ],
+        timeSpent: 0,
+      });
+      collabMock.getSession.mockResolvedValue({
+        userCollaborationSessions: [{ user: { id: 5, name: 'A', email: 'a@mail', avatar: 'x' }, permissions: [] }],
+      });
+
+      await svc.getSessionTotalData(sock, 20);
+
+      expect(state.onlineUsers.has(5)).toBeFalsy();
+      expect(state.socketSessionMap.has('s1')).toBeFalsy();
+
+      const res = await svc.join(sock, 20);
+
+      expect(res.isAllowed).toBeTruthy();
+      expect(res.isFirstJoin).toBeTruthy();
+      expect(state.onlineUsers.has(5)).toBeTruthy();
+      expect(state.socketSessionMap.get('s1')).toBe(20);
+    });
   });
 
   it('cleans up state and updates timeSpent on last socket', async () => {
@@ -108,6 +131,9 @@ describe('SessionPresenceService', () => {
     ucsMock.findByUserAndSession.mockResolvedValue({ timeSpent: 0 });
 
     const sockA = fakeSocket('a', 11);
+
+    state.socketSessionMap.set('a', 50);
+
     const first = await svc.getTimeUserSpent(50, sockA);
 
     expect(first).toBe(0);
@@ -117,6 +143,9 @@ describe('SessionPresenceService', () => {
     jest.spyOn(Date, 'now').mockReturnValue(t0 + 4000);
 
     const sockB = fakeSocket('b', 11);
+
+    state.socketSessionMap.set('b', 50);
+
     const total = await svc.getTimeUserSpent(50, sockB);
 
     expect(total).toBeCloseTo(4, 0);

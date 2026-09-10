@@ -13,7 +13,7 @@ import { Token } from './token.model';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_ACCESS_SECRET'),
-        signOptions: { expiresIn: '60m' },
+        signOptions: { expiresIn: '15m' },
       }),
     }),
     ConfigModule,

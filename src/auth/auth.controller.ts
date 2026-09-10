@@ -35,7 +35,7 @@ export class AuthController {
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
       sameSite: 'strict',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       domain: cookieDomain,
@@ -44,7 +44,7 @@ export class AuthController {
     if (accessToken) {
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProduction,
         sameSite: 'strict',
         maxAge: 15 * 60 * 1000,
         domain: cookieDomain,
@@ -66,7 +66,7 @@ export class AuthController {
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
       sameSite: 'strict',
       maxAge: 30 * 24 * 60 * 60 * 1000,
       domain: cookieDomain,
@@ -75,7 +75,7 @@ export class AuthController {
     if (accessToken) {
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProduction,
         sameSite: 'strict',
         maxAge: 15 * 60 * 1000,
         domain: cookieDomain,
@@ -97,13 +97,13 @@ export class AuthController {
     await this.authService.logout(refreshToken);
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
       sameSite: 'strict',
       domain: cookieDomain,
     });
     res.clearCookie('accessToken', {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
       sameSite: 'strict',
       domain: cookieDomain,
     });
@@ -111,7 +111,7 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
-  @Get('refresh-cookies')
+  @Post('refresh-cookies')
   @HttpCode(HttpStatus.OK)
   async setRefreshCookie(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies.refreshToken;
@@ -124,14 +124,14 @@ export class AuthController {
 
     res.cookie('refreshToken', newRefreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
       sameSite: 'strict',
       domain: cookieDomain,
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: isProduction,
       sameSite: 'strict',
       domain: cookieDomain,
       maxAge: 15 * 60 * 1000,
@@ -140,18 +140,38 @@ export class AuthController {
     return { message: 'Refresh token set in cookies' };
   }
 
-  @Get('get-tokens')
+  @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refreshWithToken(@Req() req: Request) {
+  async refreshWithToken(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token found');
     }
 
-    const { refreshToken: newRefreshToken, accessToken, user } = await this.authService.refresh(refreshToken);
+    const { accessToken, user } = await this.authService.refreshAccess(refreshToken);
 
-    return { accessToken, newRefreshToken, user };
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'strict',
+      domain: cookieDomain,
+      maxAge: 15 * 60 * 1000,
+    });
+
+    return { accessToken, user };
+  }
+
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  async me(@Req() req: Request) {
+    const accessToken = req.cookies.accessToken;
+
+    if (!accessToken) {
+      throw new UnauthorizedException('No access token found');
+    }
+
+    return this.authService.getMe(accessToken);
   }
 
   @Post('forgot-password')
@@ -178,14 +198,14 @@ export class AuthController {
 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProduction,
         sameSite: 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000,
         domain: cookieDomain,
       });
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProduction,
         sameSite: 'lax',
         maxAge: 15 * 60 * 1000,
         domain: cookieDomain,
