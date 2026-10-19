@@ -157,14 +157,16 @@ describe('InvitationGateway (websocket)', () => {
       const timer = setTimeout(() => {
         inviter.close();
         receiver.close();
-        reject(new Error('newInvitation not received'));
+        reject(new Error('Invitation broadcasts or acknowledgements not received'));
       }, 2000);
 
       let gotInvFromDashboard = false;
       let gotInvFromSession = false;
+      let gotCreateAck = false;
+      let gotListAck = false;
 
       const finish = () => {
-        if (gotInvFromDashboard && gotInvFromSession) {
+        if (gotInvFromDashboard && gotInvFromSession && gotCreateAck && gotListAck) {
           clearTimeout(timer);
           inviter.close();
           receiver.close();
@@ -173,9 +175,15 @@ describe('InvitationGateway (websocket)', () => {
       };
 
       inviter.once('connect', () =>
-        inviter.emit('createInvitation', {
-          email: 'user2@mail.com',
-          role: Permission.READ,
+        inviter.emit('createInvitation', { email: 'user2@mail.com', role: Permission.READ }, (response) => {
+          expect(response).toMatchObject({ ok: true, invitation: { id: 11 } });
+          gotCreateAck = true;
+          inviter.emit('getInvitations', {}, (listResponse) => {
+            expect(listResponse).toMatchObject({ ok: true, invitations: [{ id: baseInvitation.id }] });
+            gotListAck = true;
+            finish();
+          });
+          finish();
         }),
       );
 

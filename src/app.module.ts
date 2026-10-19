@@ -14,6 +14,8 @@ import { TokenModule } from './token/token.module';
 import { FileModule } from './file/file.module';
 import { UsersModule } from './user/users.module';
 import { HealthModule } from './health/health.module';
+import { PublicInfoModule } from './public-info/public-info.module';
+import { StatisticsModule } from './statistics/statistics.module';
 
 @Module({
   imports: [
@@ -91,6 +93,8 @@ import { HealthModule } from './health/health.module';
     TokenModule,
     FileModule,
     HealthModule,
+    PublicInfoModule,
+    StatisticsModule,
   ],
 })
 export class AppModule {}
