@@ -133,11 +133,15 @@ export class InvitationGateway {
 
       this.server.to(dashboardRoom(invitation.receiver.id)).emit('newInvitation', invitation);
       this.server.to(sessionRoom(sessionId)).emit('newInvitation', invitation);
+
+      return { ok: true, invitation };
     } catch (error) {
       const message = getErrorMessage(error);
 
       this.logger.error(message);
       client.emit('error', message);
+
+      return { ok: false, message };
     }
   }
 
@@ -148,11 +152,15 @@ export class InvitationGateway {
       const invitations = await this.invitationService.getInvitationsForSession(sessionId);
 
       client.emit('invitations', invitations);
+
+      return { ok: true, invitations };
     } catch (error) {
       const message = getErrorMessage(error);
 
       this.logger.error(message);
       client.emit('error', message);
+
+      return { ok: false, message };
     }
   }
 

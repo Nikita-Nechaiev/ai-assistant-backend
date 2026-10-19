@@ -157,7 +157,10 @@ describe('InvitationGateway', () => {
       receiver: { id: 99 },
       session: { id: 40 },
     });
-    await g.createInvitation(s, { email: 'a@mail', role: Permission.READ });
+    await expect(g.createInvitation(s, { email: 'a@mail', role: Permission.READ })).resolves.toEqual({
+      ok: true,
+      invitation: { receiver: { id: 99 }, session: { id: 40 } },
+    });
     expect(create.execute).toHaveBeenCalled();
     expect(g['server'].to).toHaveBeenCalledWith(dash(99));
     expect(g['server'].to).toHaveBeenCalledWith(ses(40));
@@ -169,7 +172,10 @@ describe('InvitationGateway', () => {
 
     ctx.getSessionIdOrThrow.mockReturnValue(41);
     create.execute.mockRejectedValue(new Error('fail'));
-    await g.createInvitation(s, { email: 'b@mail', role: Permission.READ });
+    await expect(g.createInvitation(s, { email: 'b@mail', role: Permission.READ })).resolves.toEqual({
+      ok: false,
+      message: 'fail',
+    });
     expect(s.emit).toHaveBeenCalledWith('error', 'fail');
   });
 
@@ -179,7 +185,7 @@ describe('InvitationGateway', () => {
 
     ctx.getSessionIdOrThrow.mockReturnValue(55);
     inv.getInvitationsForSession.mockResolvedValue(['inv']);
-    await g.getInvitations(s);
+    await expect(g.getInvitations(s)).resolves.toEqual({ ok: true, invitations: ['inv'] });
     expect(s.emit).toHaveBeenCalledWith('invitations', ['inv']);
   });
 
@@ -189,7 +195,7 @@ describe('InvitationGateway', () => {
 
     ctx.getSessionIdOrThrow.mockReturnValue(55);
     inv.getInvitationsForSession.mockRejectedValue(new Error('x'));
-    await g.getInvitations(s);
+    await expect(g.getInvitations(s)).resolves.toEqual({ ok: false, message: 'x' });
     expect(s.emit).toHaveBeenCalledWith('error', 'x');
   });
 
